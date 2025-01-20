@@ -1,0 +1,31 @@
+[project]
+name = "wingspan_gym"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dynamic = ["version"]
+dependencies = [
+    "fastexcel",
+    "gymnasium>=1.0.0",
+    "jaxtyping>=0.2.36",
+    "maturin>=1.8.1",
+    "polars>=1.20",
+]
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+]
+
+[dependency-groups]
+dev = ["pytest"]
+lint = ["ruff"]
+
+[build-system]
+requires = ["maturin>=1.8,<2.0"]
+build-backend = "maturin"
+
+[tool.maturin]
+features = ["pyo3/extension-module"]
+python-source = "python"
+module-name = "wingspan_gym._internal"
