@@ -1,5 +1,10 @@
 use pyo3::prelude::*;
 
+pub mod bird_card;
+mod resource;
+mod habitat;
+mod nest;
+
 /// Formats the sum of two numbers as string.
 #[pyfunction]
 fn sum_as_string(a: usize, b: usize) -> PyResult<String> {
