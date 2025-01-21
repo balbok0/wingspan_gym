@@ -1,24 +1,19 @@
 use pyo3::prelude::*;
+use wingspan_env::PyWingspanEnv;
 
 pub mod bird_card;
+pub mod wingspan_env;
+mod expansion;
 mod resource;
 mod habitat;
 mod nest;
-
-/// Formats the sum of two numbers as string.
-#[pyfunction]
-fn sum_as_string(a: usize, b: usize) -> PyResult<String> {
-    Ok((a + b).to_string())
-}
+mod player;
+mod action;
 
 /// A Python module implemented in Rust.
 #[pymodule]
 #[pyo3(name = "_internal")]
 fn wingspan_gym(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
-    let rust_module = PyModule::new(py, "_internal")?;
-
-    m.add_function(wrap_pyfunction!(sum_as_string, m)?)?;
-
-    m.add_submodule(&rust_module)?;
+    m.add_class::<PyWingspanEnv>()?;
     Ok(())
 }

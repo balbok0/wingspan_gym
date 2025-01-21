@@ -52,13 +52,14 @@ def main():
     with open(bird_impl_file_path, mode="w") as f:
         # Imports
         f.writelines([
+            "use strum_macros::EnumIter;\n\n",
             "use super::BirdCardColor;\n",
             "use crate::{{habitat::Habitat, nest::NestType, resource::{{BirdCardCost, CostAlternative}}}};\n",
         ])
 
         # Start with enum
         f.writelines([
-            "\n#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]",
+            "\n#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, EnumIter)]",
             "\npub enum BirdCard {\n"
         ])
 
