@@ -15,6 +15,10 @@ class WingspanEnv(gym.Env):
         assert seed is None or seed >= 0
         self._inner.reset(seed)
 
+    def step(self, action_idx: int):
+        if self._inner.step(action_idx) is None:
+            return None, None, None, None, None
+
     def _debug_print_state(self):
         round_idx, player_idx, players = self._inner._debug_get_state()
         print(f"Current round: {round_idx}")
@@ -27,4 +31,4 @@ class WingspanEnv(gym.Env):
     def _print_player(player):
         print(f"  Birds: {player.bird_cards}")
         # print(f"  Bonus: {self.bonus_cards}")
-        print(f"  Resources: {player.resources}")
+        print(f"  Foods: {player.foods}")

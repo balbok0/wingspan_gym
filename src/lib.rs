@@ -4,16 +4,17 @@ use wingspan_env::PyWingspanEnv;
 pub mod bird_card;
 pub mod wingspan_env;
 mod expansion;
-mod resource;
+mod food;
 mod habitat;
 mod nest;
+mod error;
 mod player;
 mod action;
 
 /// A Python module implemented in Rust.
 #[pymodule]
 #[pyo3(name = "_internal")]
-fn wingspan_gym(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn wingspan_gym(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyWingspanEnv>()?;
     Ok(())
 }

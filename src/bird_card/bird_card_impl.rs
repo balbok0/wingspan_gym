@@ -1,7 +1,7 @@
 use strum_macros::EnumIter;
 
 use super::BirdCardColor;
-use crate::{{habitat::Habitat, nest::NestType, resource::{{BirdCardCost, CostAlternative}}}};
+use crate::{{habitat::Habitat, nest::NestType, food::{{BirdCardCost, CostAlternative}}}};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, EnumIter)]
 pub enum BirdCard {
