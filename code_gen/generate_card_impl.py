@@ -32,7 +32,8 @@ def __load_all_cards():
         *[(pl.col(col) == "X").fill_null(False).alias(col) for col in ["Forest", "Grassland", "Wetland"]],
         pl.col("Color").fill_null("None").alias("Color"),
         into_int_expr("Victory points").fill_null(0).alias("Victory points"),
-        pl.col("Nest type").fill_null("None").alias("Nest type")
+        pl.col("Nest type").fill_null("None").alias("Nest type"),
+        (pl.col("Predator") == "X").fill_null(False).alias("is_predator"),
     )
 
     return birds, bonus, goals
@@ -233,6 +234,20 @@ def main():
             "  }\n"
         ])
 
+        # is_predator
+        f.writelines([
+            "\n",
+            "  pub fn is_predator(&self) -> bool {\n",
+            "    match self {\n",
+        ])
+        f.writelines([
+            f"      Self::{row['enum_name']} => {str(row['is_predator']).lower()},\n"
+            for row in birds.iter_rows(named=True)
+        ])
+        f.writelines([
+            "    }\n",
+            "  }\n"
+        ])
 
         # Close impl block
         f.write("}\n")
