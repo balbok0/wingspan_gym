@@ -3,14 +3,14 @@ use rand::{rngs::StdRng, seq::SliceRandom, SeedableRng};
 
 use pyo3::{exceptions::PyValueError, prelude::*};
 
-use crate::{action::Action, bird_card::{get_deck, BirdCard}, error::{WingError, WingResult}, expansion::Expansion, player::Player};
+use crate::{action::Action, bird_card::{get_deck, BirdCard}, error::{WingError, WingResult}, expansion::Expansion, habitat::Habitat, player::Player};
 
 #[derive(Debug, Builder, Clone)]
 pub struct WingspanEnvConfig {
     #[builder(setter(into), default = 20)]
-    hand_limit: u8,
+    pub(crate) hand_limit: u8,
     #[builder(setter(into), default = 2)]
-    num_players: usize,
+    pub(crate) num_players: usize,
     #[builder(default = vec![])]
     expansions: Vec<Expansion>,
 }
@@ -24,7 +24,7 @@ pub struct WingspanEnv {
     _player_idx: usize,
     _bird_deck: Vec<BirdCard>,
     _players: Vec<Player>,
-    _action_queue: Vec<Action>,
+    pub(crate) _action_queue: Vec<Action>,
 }
 
 impl WingspanEnv {
@@ -80,9 +80,16 @@ impl WingspanEnv {
 
         // unwrap is safe, since there is a check in the end
         let action = self._action_queue.last().unwrap().clone();
-
-        action.perform_action(action_idx, self)?;
+        if !action.is_performable(self) {
+            return Err(WingError::InvalidAction);
+        }
         self._action_queue.pop();
+        action.perform_action(action_idx, self)?;
+
+        // Ensure that next action can be performed
+        while !self._action_queue.is_empty() && !self._action_queue.last().unwrap().clone().is_performable(self) {
+            self._action_queue.pop();
+        }
 
         // Handle end of turn for the player
         if self._action_queue.is_empty() {
@@ -128,12 +135,29 @@ impl WingspanEnv {
         Ok(())
     }
 
+    pub fn populate_action_queue_from_habitat_action(&mut self, habitat: &Habitat) {
+        let mut actions = self.current_player_mut().mat.get_actions(habitat);
+
+        println!("Actions from queue: {actions:?}");
+
+        self._action_queue.append(&mut actions);
+        println!("Current queue: {:?}", self._action_queue);
+    }
+
     pub fn current_player(&self) -> &Player {
         &self._players[self._player_idx]
     }
 
     pub fn current_player_mut(&mut self) -> &mut Player {
         &mut self._players[self._player_idx]
+    }
+
+    pub fn num_choices(&self) -> Option<usize> {
+        self._action_queue.last().map(|x| x.num_choices(&self))
+    }
+
+    pub fn config(&self) -> &WingspanEnvConfig {
+        &self.config
     }
 }
 
@@ -181,9 +205,13 @@ impl PyWingspanEnv {
         }
     }
 
-    pub fn _debug_get_state(slf: &Bound<'_, Self>) -> (i8, usize, Vec<Player>) {
+    pub fn num_choices(slf: &Bound<'_, Self>) -> Option<usize> {
+        slf.borrow().inner.num_choices()
+    }
+
+    pub fn _debug_get_state(slf: &Bound<'_, Self>) -> (i8, usize, Option<String>, Vec<Player>) {
         let inner = &slf.borrow().inner;
 
-        (inner._round_idx, inner._player_idx, inner._players.clone())
+        (inner._round_idx, inner._player_idx, inner._action_queue.last().map(|x| format!("{x:?}")), inner._players.clone())
     }
 }

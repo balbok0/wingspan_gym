@@ -1,4 +1,4 @@
-use crate::{bird_card::BirdCard, error::{WingError, WingResult}, food::Foods};
+use crate::{bird_card::{is_enough_food_to_play_a_card, BirdCard}, error::{WingError, WingResult}, food::Foods, player_mat::PlayerMat};
 use pyo3::prelude::*;
 
 
@@ -10,6 +10,11 @@ pub struct Player {
     pub(crate) bird_cards: Vec<BirdCard>,
     #[pyo3(get)]
     pub(crate) turns_left: u8,
+
+    pub(crate) mat: PlayerMat,
+
+    // Optimization that uses a fact, that before every bird play we check for resources etc.
+    pub(crate) _playable_bird_cards: Vec<BirdCard>
 }
 
 impl Default for Player {
@@ -18,6 +23,8 @@ impl Default for Player {
             foods: [1, 1, 1, 1, 1],
             bird_cards: vec![],
             turns_left: 8,
+            mat: Default::default(),
+            _playable_bird_cards: vec![],
         }
     }
 }
@@ -28,6 +35,8 @@ impl Player {
             foods: [1, 1, 1, 1, 1],
             bird_cards,
             turns_left: 8,
+            mat: Default::default(),
+            _playable_bird_cards: vec![],
         }
     }
 
@@ -62,6 +71,26 @@ impl Player {
         } else {
             self.discard_bird_card(index - 5)
         }
+    }
+
+    pub fn can_play_a_bird_card(&mut self) -> bool {
+        let mut playable_cards = vec![];
+        for card in &self.bird_cards {
+            if self.mat.can_be_played(&card) && is_enough_food_to_play_a_card(&card, &self.foods) {
+                playable_cards.push(*card);
+            }
+        }
+        self._playable_bird_cards = playable_cards;
+
+        !self._playable_bird_cards.is_empty()
+    }
+
+    pub fn can_discard_food(&self) -> bool {
+        self.foods.iter().sum::<u8>() > 0
+    }
+
+    pub fn can_discard_bird_card(&self) -> bool {
+        self.bird_cards.len() > 0
     }
 }
 

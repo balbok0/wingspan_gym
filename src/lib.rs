@@ -9,6 +9,7 @@ mod habitat;
 mod nest;
 mod error;
 mod player;
+mod player_mat;
 mod action;
 
 /// A Python module implemented in Rust.

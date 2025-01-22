@@ -19,10 +19,14 @@ class WingspanEnv(gym.Env):
         if self._inner.step(action_idx) is None:
             return None, None, None, None, None
 
+    def num_choices(self) -> int:
+        return self._inner.num_choices()
+
     def _debug_print_state(self):
-        round_idx, player_idx, players = self._inner._debug_get_state()
+        round_idx, player_idx, action, players = self._inner._debug_get_state()
         print(f"Current round: {round_idx}")
         print(f"Current player: {player_idx}")
+        print(f"Next Action: {action}")
 
         print("Cur player's hand:")
         self._print_player(players[player_idx])
