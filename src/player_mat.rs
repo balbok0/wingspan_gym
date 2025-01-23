@@ -6,8 +6,8 @@ type EggsRow = [u8; 5];
 #[derive(Debug, Clone)]
 pub struct MatRow {
     pub birds: Vec<BirdCard>,
-    eggs: EggsRow,
-    eggs_cap: EggsRow,
+    pub eggs: EggsRow,
+    pub eggs_cap: EggsRow,
 }
 
 impl Default for MatRow {
@@ -57,7 +57,7 @@ impl Default for PlayerMat {
 }
 
 impl PlayerMat {
-    fn get_row(&self, habitat: &Habitat) -> &MatRow {
+    pub fn get_row(&self, habitat: &Habitat) -> &MatRow {
         match habitat {
             Habitat::Forest => {
                 &self.forest
@@ -142,7 +142,10 @@ impl PlayerMat {
         if row.birds.len() >= 5 {
             Err(WingError::InvalidAction)
         } else {
+            let egg_cap = bird_card.egg_capacity();
+            row.eggs_cap[row.birds.len()] += egg_cap;
             row.birds.push(bird_card);
+            self.eggs_cap += egg_cap;
             Ok(())
         }
     }

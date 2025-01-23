@@ -25,10 +25,6 @@ pub(crate) enum BirdFeederActionResult {
 }
 
 impl BirdFeeder {
-    pub fn new() -> Self {
-        BirdFeeder::default()
-    }
-
     pub fn reroll(&mut self, rng: &mut StdRng) {
         self.dice_out_birdfeeder.clear();
         self.dice_in_birdfeeder = sample_dice(rng, 5);

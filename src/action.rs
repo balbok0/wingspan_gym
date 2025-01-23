@@ -1,4 +1,4 @@
-use crate::{error::{WingError, WingResult}, food::Foods, habitat::Habitat, wingspan_env::WingspanEnv};
+use crate::{error::{WingError, WingResult}, habitat::Habitat, wingspan_env::WingspanEnv};
 
 
 #[derive(Debug, Clone)]
@@ -71,6 +71,20 @@ impl Action {
                 }
                 Ok(())
             },
+            Action::GetFoodChoice(choices) => {
+                let action_idx = action_idx as usize;
+                if action_idx >= choices.len() {
+                    Err(WingError::InvalidAction)
+                } else {
+                    env.current_player_mut().foods[choices[action_idx]] += 1;
+                    Ok(())
+                }
+            },
+            Action::GetBirdCard => {
+                let card = env._bird_deck.draw_card(action_idx)?;
+                env.current_player_mut().bird_cards.push(card);
+                Ok(())
+            },
             _ => todo!(),
         }
     }
@@ -113,10 +127,7 @@ impl Action {
             }
             Action::DiscardFood => 5,
             Action::DiscardFoodChoice(choices) => choices.len(),
-            Action::GetBirdCard => {
-                // Implement face up dash
-                todo!()
-            },
+            Action::GetBirdCard => env._bird_deck.num_actions(),
             Action::GetEgg => {
                 // Implement egg locations checks in mat
                 todo!()

@@ -3,7 +3,7 @@ use rand::{rngs::StdRng, seq::SliceRandom, SeedableRng};
 
 use pyo3::{exceptions::PyValueError, prelude::*};
 
-use crate::{action::Action, bird_card::{get_deck, BirdCard}, bird_feeder::BirdFeeder, error::{WingError, WingResult}, expansion::Expansion, habitat::Habitat, player::Player};
+use crate::{action::Action, bird_card::get_deck, bird_feeder::BirdFeeder, deck_and_holder::DeckAndHolder, error::{WingError, WingResult}, expansion::Expansion, habitat::Habitat, player::Player};
 
 #[derive(Debug, Builder, Clone)]
 pub struct WingspanEnvConfig {
@@ -22,7 +22,7 @@ pub struct WingspanEnv {
     pub(crate) rng: StdRng,
     _round_idx: i8,
     _player_idx: usize,
-    _bird_deck: Vec<BirdCard>,
+    pub(crate) _bird_deck: DeckAndHolder,
     _players: Vec<Player>,
     pub(crate) _bird_feeder: BirdFeeder,
     pub(crate) _action_queue: Vec<Action>,
@@ -36,7 +36,7 @@ impl WingspanEnv {
             rng: StdRng::from_entropy(),
             _round_idx: -1,
             _player_idx: 0,
-            _bird_deck: Vec::new(),
+            _bird_deck: Default::default(),
             _bird_feeder: Default::default(),
             _players: Vec::with_capacity(num_players as usize),
             _action_queue: Vec::with_capacity(50), // 50 seems like a reasonable upper bound even for most intense chains?
@@ -58,14 +58,14 @@ impl WingspanEnv {
         // Create new deck
         let mut deck = get_deck(&self.config.expansions);
         deck.shuffle(&mut self.rng);
-        self._bird_deck = deck;
+        self._bird_deck = DeckAndHolder::new(deck);
 
         // TODO: Bonus cards for players
 
         // Give each player foods
 
         for _ in 0..self.config.num_players {
-            let player_cards = self._bird_deck.split_off(self._bird_deck.len() - 5);
+            let player_cards = self._bird_deck.draw_cards_from_deck(5);
             self._players.push(Player::new(player_cards));
         }
 
@@ -78,8 +78,26 @@ impl WingspanEnv {
         // TODO: 3 birds face-up
     }
 
-    fn post_player_setup(&mut self) {
+    fn post_init_player_setup(&mut self) {
         self._bird_feeder.reroll(&mut self.rng);
+        self._bird_deck.reset_display();
+    }
+
+    fn end_of_turn(&mut self) {
+        self._bird_deck.refill_display();
+    }
+
+    fn end_of_round(&mut self) {
+        self._round_idx += 1;
+
+        // TODO: End of round abilities
+        // TODO: End of round goals
+
+        // Start of the new round
+        for player in self._players.iter_mut() {
+            player.set_turns_left(8 - self._round_idx as u8);
+        }
+        self._bird_deck.reset_display();
     }
 
     pub fn step(&mut self, action_idx: u8) -> WingResult<()> {
@@ -90,13 +108,17 @@ impl WingspanEnv {
             println!("Action is not performable");
             return Err(WingError::InvalidAction);
         }
-        self._action_queue.pop();
-        action.perform_action(action_idx, self)?;
+        let action = self._action_queue.pop().unwrap();
+        if let Err(e) = action.perform_action(action_idx, self) {
+            self._action_queue.push(action);
+            return Err(e);
+        };
 
         // Ensure that next action can be performed
         while !self._action_queue.is_empty() && !self._action_queue.last().unwrap().clone().is_performable(self) {
             self._action_queue.pop();
         }
+        println!("After while check!");
 
         // Handle end of turn for the player
         if self._action_queue.is_empty() {
@@ -108,7 +130,7 @@ impl WingspanEnv {
             if self._round_idx == -1 {
                 if self._player_idx == self.config.num_players {
                     // Setup is done from players side.
-                    self.post_player_setup();
+                    self.post_init_player_setup();
 
                     // TODO: Finish it here and then make it round 0
                     self._round_idx = 0;
@@ -126,23 +148,27 @@ impl WingspanEnv {
                         self._action_queue.push(Action::DiscardFoodOrBirdCard);
                     }
                 }
+            } else if self._round_idx == 3 {
+                // End of game is after Round 4 (0 - when it is zero indexed)
+                todo!("End of game todo!")
             } else {
+                self._player_idx %= self.config.num_players;
+                // Normal rounds
                 if self.current_player().turns_left == 0 {
-                    // Start of the new round
-                    for player in self._players.iter_mut() {
-                        player.set_turns_left(8 - self._round_idx as u8);
-                    }
-                    todo!("New round logic not yet implemented");
+                    // End of round
+                    self.end_of_round();
+                } else {
+                    // End of normal turn
+                    self.end_of_turn();
                 }
                 self._action_queue.push(Action::ChooseAction);
 
                 // Reduce number of turns left, since a new player will be making a move
                 self.current_player_mut().turns_left -= 1;
             }
-
         }
 
-        println!("Queue size: {}", self._action_queue.len());
+        println!("Queue size: {:?}\n", self._action_queue);
         Ok(())
     }
 
@@ -210,7 +236,7 @@ impl PyWingspanEnv {
         match slf.borrow_mut().inner.step(action_idx) {
             // Ok(x) => return Ok(Some(x)),
             // FIXME: for now returning none, so it doesn't freak out
-            Ok(x) => return Ok(None),
+            Ok(_x) => return Ok(None),
             Err(WingError::InvalidAction) => return Ok(None),
             Err(x) => return Err(x.into()),
         }

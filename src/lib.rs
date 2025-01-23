@@ -4,6 +4,7 @@ use wingspan_env::PyWingspanEnv;
 pub mod bird_card;
 pub mod wingspan_env;
 mod bird_feeder;
+mod deck_and_holder;
 mod expansion;
 mod food;
 mod habitat;
