@@ -1,3 +1,10 @@
+// Food ids:
+// 0 - Invertebrate
+// 1 - Seed
+// 2 - Fish
+// 3 - Fruit
+// 4 - Rodent
+
 pub type FoodReq = [Option<u8>; 5];
 pub type Foods = [u8; 5];
 

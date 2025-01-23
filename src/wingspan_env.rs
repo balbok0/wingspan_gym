@@ -3,7 +3,7 @@ use rand::{rngs::StdRng, seq::SliceRandom, SeedableRng};
 
 use pyo3::{exceptions::PyValueError, prelude::*};
 
-use crate::{action::Action, bird_card::{get_deck, BirdCard}, error::{WingError, WingResult}, expansion::Expansion, habitat::Habitat, player::Player};
+use crate::{action::Action, bird_card::{get_deck, BirdCard}, bird_feeder::BirdFeeder, error::{WingError, WingResult}, expansion::Expansion, habitat::Habitat, player::Player};
 
 #[derive(Debug, Builder, Clone)]
 pub struct WingspanEnvConfig {
@@ -19,11 +19,12 @@ pub struct WingspanEnvConfig {
 #[derive(Debug, Clone)]
 pub struct WingspanEnv {
     config: WingspanEnvConfig,
-    rng: StdRng,
+    pub(crate) rng: StdRng,
     _round_idx: i8,
     _player_idx: usize,
     _bird_deck: Vec<BirdCard>,
     _players: Vec<Player>,
+    pub(crate) _bird_feeder: BirdFeeder,
     pub(crate) _action_queue: Vec<Action>,
 }
 
@@ -36,6 +37,7 @@ impl WingspanEnv {
             _round_idx: -1,
             _player_idx: 0,
             _bird_deck: Vec::new(),
+            _bird_feeder: Default::default(),
             _players: Vec::with_capacity(num_players as usize),
             _action_queue: Vec::with_capacity(50), // 50 seems like a reasonable upper bound even for most intense chains?
         };
@@ -76,11 +78,16 @@ impl WingspanEnv {
         // TODO: 3 birds face-up
     }
 
+    fn post_player_setup(&mut self) {
+        self._bird_feeder.reroll(&mut self.rng);
+    }
+
     pub fn step(&mut self, action_idx: u8) -> WingResult<()> {
 
         // unwrap is safe, since there is a check in the end
         let action = self._action_queue.last().unwrap().clone();
         if !action.is_performable(self) {
+            println!("Action is not performable");
             return Err(WingError::InvalidAction);
         }
         self._action_queue.pop();
@@ -93,6 +100,7 @@ impl WingspanEnv {
 
         // Handle end of turn for the player
         if self._action_queue.is_empty() {
+            println!("Queue is empty");
             // Loop through players
             self._player_idx += 1;
 
@@ -100,6 +108,8 @@ impl WingspanEnv {
             if self._round_idx == -1 {
                 if self._player_idx == self.config.num_players {
                     // Setup is done from players side.
+                    self.post_player_setup();
+
                     // TODO: Finish it here and then make it round 0
                     self._round_idx = 0;
                     self._player_idx = 0;
@@ -132,6 +142,7 @@ impl WingspanEnv {
 
         }
 
+        println!("Queue size: {}", self._action_queue.len());
         Ok(())
     }
 

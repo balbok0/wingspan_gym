@@ -1,4 +1,4 @@
-use crate::{error::{WingError, WingResult}, habitat::Habitat, wingspan_env::WingspanEnv};
+use crate::{error::{WingError, WingResult}, food::Foods, habitat::Habitat, wingspan_env::WingspanEnv};
 
 
 #[derive(Debug, Clone)]
@@ -12,6 +12,9 @@ pub enum Action {
     GetFood,
     GetEgg,
     GetBirdCard,
+
+    // Get food action, but with only select choices.
+    GetFoodChoice(Box<[u8]>),
 
     // Discard Food Or Bird Card
     DiscardFoodOrBirdCard,
@@ -61,7 +64,14 @@ impl Action {
                 env.populate_action_queue_from_habitat_action(&habitat);
 
                 Ok(())
-            }
+            },
+            Action::GetFood => {
+                match env._bird_feeder.take_dice_and_update_state(&mut env.rng, action_idx)? {
+                    crate::bird_feeder::BirdFeederActionResult::GainFood(food_idx) => env.current_player_mut().foods[food_idx] += 1,
+                    crate::bird_feeder::BirdFeederActionResult::FollowupAction(action) => env._action_queue.push(action),
+                }
+                Ok(())
+            },
             _ => todo!(),
         }
     }
@@ -70,6 +80,7 @@ impl Action {
         match self {
             Action::ChooseAction => true,
             Action::PlayBird => env.current_player_mut().can_play_a_bird_card(),
+            Action::GetFoodChoice(_) => true,
             Action::GetFood => true,
             Action::GetEgg => env.current_player().mat.can_place_egg(),
             Action::GetBirdCard => env.current_player().bird_cards.len() < env.config().hand_limit.into(),
@@ -104,13 +115,16 @@ impl Action {
             },
             Action::GetFood => {
                 // Implement bird feeder
-                todo!()
+                env._bird_feeder.num_actions()
             }
+            Action::GetFoodChoice(choices) => {
+                choices.len()
+            },
             Action::DiscardEgg => {
                 // Implement egg locations checks in mat
                 todo!()
             },
-            Action::DoThen(_, _) => 2, // Yes or No
+            Action::DoThen(_, _) => 2, // Do it or not
         }
     }
 }
