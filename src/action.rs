@@ -10,11 +10,9 @@ pub enum Action {
 
     // Get resource actions
     GetFood,
+    GetFoodChoice(Box<[usize]>),
     GetEgg,
     GetBirdCard,
-
-    // Get food action, but with only select choices.
-    GetFoodChoice(Box<[u8]>),
 
     // Discard Food Or Bird Card
     DiscardFoodOrBirdCard,
@@ -22,6 +20,7 @@ pub enum Action {
     DiscardBirdCard,
     // Discard Food
     DiscardFood,
+    DiscardFoodChoice(Box<[(usize, u8)]>), // Discard food of choice N times
     // Discard Egg
     DiscardEgg,
 
@@ -80,13 +79,21 @@ impl Action {
         match self {
             Action::ChooseAction => true,
             Action::PlayBird => env.current_player_mut().can_play_a_bird_card(),
-            Action::GetFoodChoice(_) => true,
             Action::GetFood => true,
+            Action::GetFoodChoice(_) => true,
             Action::GetEgg => env.current_player().mat.can_place_egg(),
             Action::GetBirdCard => env.current_player().bird_cards.len() < env.config().hand_limit.into(),
             Action::DiscardFoodOrBirdCard => Action::DiscardFood.is_performable(env) || Action::DiscardBirdCard.is_performable(env),
             Action::DiscardBirdCard => env.current_player().can_discard_bird_card(),
             Action::DiscardFood => env.current_player().can_discard_food(),
+            Action::DiscardFoodChoice(choices) => {
+                let foods = &env.current_player().foods;
+                choices
+                    .iter()
+                    .map(|(idx, cost)| foods[*idx] >= *cost)
+                    .reduce(|a, b| a || b)
+                    .unwrap_or(true)
+            },
             Action::DiscardEgg => env.current_player().mat.can_discard_egg(),
             Action::DoThen(action_req, action_reward) => action_req.is_performable(env) && action_reward.is_performable(env),
         }
@@ -96,7 +103,7 @@ impl Action {
         match self {
             Action::ChooseAction => 4,
             Action::PlayBird => {
-                env.current_player()._playable_bird_cards.len()
+                env.current_player()._playable_card_hab_combos.len()
             },
             Action::DiscardFoodOrBirdCard => {
                 5 + env.current_player().bird_cards.len()
@@ -105,6 +112,7 @@ impl Action {
                 env.current_player().bird_cards.len()
             }
             Action::DiscardFood => 5,
+            Action::DiscardFoodChoice(choices) => choices.len(),
             Action::GetBirdCard => {
                 // Implement face up dash
                 todo!()
@@ -113,18 +121,14 @@ impl Action {
                 // Implement egg locations checks in mat
                 todo!()
             },
-            Action::GetFood => {
-                // Implement bird feeder
-                env._bird_feeder.num_actions()
-            }
-            Action::GetFoodChoice(choices) => {
-                choices.len()
-            },
+            Action::GetFood => env._bird_feeder.num_actions(),
+            Action::GetFoodChoice(choices) => choices.len(),
             Action::DiscardEgg => {
                 // Implement egg locations checks in mat
                 todo!()
             },
-            Action::DoThen(_, _) => 2, // Do it or not
+            // Do it or not
+            Action::DoThen(_, _) => 2,
         }
     }
 }

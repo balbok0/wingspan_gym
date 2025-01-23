@@ -1,4 +1,4 @@
-use crate::{action::Action, bird_card::BirdCard, habitat::Habitat};
+use crate::{action::Action, bird_card::BirdCard, error::{WingError, WingResult}, habitat::Habitat};
 
 type EggsRow = [u8; 5];
 
@@ -71,8 +71,22 @@ impl PlayerMat {
         }
     }
 
-    pub fn can_be_played(&self, card: &BirdCard) -> bool {
-        for habitat in card.habitats() {
+    fn get_row_mut(&mut self, habitat: &Habitat) -> &mut MatRow {
+        match habitat {
+            Habitat::Forest => {
+                &mut self.forest
+            },
+            Habitat::Grassland => {
+                &mut self.grassland
+            },
+            Habitat::Wetland => {
+                &mut self.wetland
+            },
+        }
+    }
+
+    pub fn playable_habitats(&self, card: &BirdCard) -> Vec<Habitat> {
+        card.habitats().iter().filter(|habitat| {
             let hab_row = self.get_row(habitat);
 
             if let Some(row) = hab_row.row_to_play() {
@@ -81,11 +95,17 @@ impl PlayerMat {
                 let egg_req = (row + 1) / 2;
 
                 if egg_req <= self.num_eggs {
-                    return true;
+                    // Not enough eggs
+                    return false;
                 }
+
+                // Eggs are satisfied and there is a place
+                return true;
+            } else {
+                // No place in a habitat
+                return false
             }
-        }
-        false
+        }).cloned().collect()
     }
 
     pub fn get_actions(&self, habitat: &Habitat) -> Vec<Action> {
@@ -115,5 +135,15 @@ impl PlayerMat {
 
     pub fn can_discard_egg(&self) -> bool {
         self.num_eggs > 0
+    }
+
+    pub fn put_bird_card(&mut self, bird_card: BirdCard, habitat: &Habitat) -> WingResult<()> {
+        let row = self.get_row_mut(habitat);
+        if row.birds.len() >= 5 {
+            Err(WingError::InvalidAction)
+        } else {
+            row.birds.push(bird_card);
+            Ok(())
+        }
     }
 }

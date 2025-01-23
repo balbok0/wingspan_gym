@@ -1,4 +1,4 @@
-use crate::{bird_card::{is_enough_food_to_play_a_card, BirdCard}, error::{WingError, WingResult}, food::Foods, player_mat::PlayerMat};
+use crate::{action::Action, bird_card::{is_enough_food_to_play_a_card, BirdCard}, error::{WingError, WingResult}, food::Foods, habitat::Habitat, player_mat::PlayerMat};
 use pyo3::prelude::*;
 
 
@@ -14,7 +14,7 @@ pub struct Player {
     pub(crate) mat: PlayerMat,
 
     // Optimization that uses a fact, that before every bird play we check for resources etc.
-    pub(crate) _playable_bird_cards: Vec<BirdCard>
+    pub(crate) _playable_card_hab_combos: Vec<(BirdCard, Habitat, usize)>
 }
 
 impl Default for Player {
@@ -24,7 +24,7 @@ impl Default for Player {
             bird_cards: vec![],
             turns_left: 8,
             mat: Default::default(),
-            _playable_bird_cards: vec![],
+            _playable_card_hab_combos: vec![],
         }
     }
 }
@@ -36,7 +36,7 @@ impl Player {
             bird_cards,
             turns_left: 8,
             mat: Default::default(),
-            _playable_bird_cards: vec![],
+            _playable_card_hab_combos: vec![],
         }
     }
 
@@ -75,14 +75,80 @@ impl Player {
 
     pub fn can_play_a_bird_card(&mut self) -> bool {
         let mut playable_cards = vec![];
-        for card in &self.bird_cards {
-            if self.mat.can_be_played(&card) && is_enough_food_to_play_a_card(&card, &self.foods) {
-                playable_cards.push(*card);
+        for (idx, card) in self.bird_cards.iter().enumerate() {
+            if is_enough_food_to_play_a_card(&card, &self.foods) {
+                playable_cards.extend(
+                    self.mat.playable_habitats(&card).into_iter().map(|habitat| (*card, habitat, idx))
+                )
             }
         }
-        self._playable_bird_cards = playable_cards;
+        self._playable_card_hab_combos = playable_cards;
 
-        !self._playable_bird_cards.is_empty()
+        !self._playable_card_hab_combos.is_empty()
+    }
+
+    pub fn play_a_bird_card(&mut self, bird_card_idx: u8) -> WingResult<Box<[Action]>> {
+        let bird_card_idx = bird_card_idx as usize;
+        if bird_card_idx >= self._playable_card_hab_combos.len() {
+            return Err(WingError::InvalidAction);
+        }
+
+        let (bird_card, hab, orig_card_idx) = self._playable_card_hab_combos[bird_card_idx];
+
+        let result = self.pay_bird_cost(&bird_card)?;
+        self.mat.put_bird_card(bird_card, &hab)?;
+        self.bird_cards.remove(orig_card_idx);
+
+        Ok(result)
+    }
+
+    fn pay_bird_cost(&mut self, bird_card: &BirdCard) -> WingResult<Box<[Action]>> {
+        let (costs, total, is_alt) = bird_card.cost();
+
+        if !is_enough_food_to_play_a_card(bird_card, &self.foods) {
+            return Err(WingError::InvalidAction);
+        }
+
+        let result: Box<[Action]> = match is_alt {
+            crate::food::CostAlternative::Yes => {
+                // Note: No need to keep track of total cost since it does not appear in "/" (or CostAlternative::Yes) cards
+
+                // First determine what are the discard options
+                let mut discard_options = vec![];
+                for (food_idx, food_cost) in costs.iter().enumerate() {
+                    if let Some(food_cost) = food_cost {
+                        if self.foods[food_idx] >= *food_cost {
+                            discard_options.push((food_idx as usize, *food_cost));
+                        }
+                    }
+                }
+
+                // If there is only one option, just do it
+                if discard_options.len() == 1 {
+                    let (food_idx, food_cost) = discard_options.pop().unwrap();
+
+                    self.foods[food_idx] -= food_cost;
+                    Box::new([])
+                } else {
+                    Box::new([Action::DiscardFoodChoice(discard_options.into_boxed_slice())])
+                }
+            },
+            crate::food::CostAlternative::No => {
+                // No Cost Alternative, so no choices needed
+                let mut total_defined_cost = 0;
+                for (food_idx, food_cost) in costs.iter().enumerate() {
+                    if let Some(food_cost) = food_cost {
+                        self.foods[food_idx] -= *food_cost;
+                        total_defined_cost += *food_cost;
+                    }
+                }
+
+                // For all of the arbitrary costs, return actions needed
+                (0..total - total_defined_cost).map(|_| Action::DiscardFood).collect()
+            }
+        };
+
+        Ok(result)
     }
 
     pub fn can_discard_food(&self) -> bool {
