@@ -36,3 +36,8 @@ class WingspanEnv(gym.Env):
         print(f"  Birds: {player.bird_cards}")
         # print(f"  Bonus: {self.bonus_cards}")
         print(f"  Foods: {player.foods}")
+
+        placed_birds = player.birds_on_mat()
+        print("  Mat:")
+        for row_type, birds in zip(["F", "G", "W"], placed_birds):
+            print(f"    {row_type}: {birds}")
