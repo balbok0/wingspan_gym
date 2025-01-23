@@ -54,7 +54,7 @@ def main():
         f.writelines([
             "use strum_macros::EnumIter;\n\n",
             "use super::BirdCardColor;\n",
-            "use crate::{{habitat::Habitat, nest::NestType, resource::{{BirdCardCost, CostAlternative}}}};\n",
+            "use crate::{{habitat::Habitat, nest::NestType, food::{{BirdCardCost, CostAlternative}}}};\n",
         ])
 
         # Start with enum
