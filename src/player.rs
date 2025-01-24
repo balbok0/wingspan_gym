@@ -77,9 +77,12 @@ impl Player {
         let mut playable_cards = vec![];
         for (idx, card) in self.bird_cards.iter().enumerate() {
             if is_enough_food_to_play_a_card(&card, &self.foods) {
-                playable_cards.extend(
-                    self.mat.playable_habitats(&card).into_iter().map(|habitat| (*card, habitat, idx))
-                )
+                let mut cur_card_habitat_combos: Vec<_> = self.mat
+                    .playable_habitats(&card)
+                    .into_iter()
+                    .map(|habitat| (*card, habitat, idx))
+                    .collect();
+                playable_cards.append(&mut cur_card_habitat_combos)
             }
         }
         self._playable_card_hab_combos = playable_cards;
@@ -87,7 +90,7 @@ impl Player {
         !self._playable_card_hab_combos.is_empty()
     }
 
-    pub fn play_a_bird_card(&mut self, bird_card_idx: u8) -> WingResult<Box<[Action]>> {
+    pub fn play_a_bird_card(&mut self, bird_card_idx: u8) -> WingResult<Vec<Action>> {
         let bird_card_idx = bird_card_idx as usize;
         if bird_card_idx >= self._playable_card_hab_combos.len() {
             return Err(WingError::InvalidAction);
@@ -102,14 +105,14 @@ impl Player {
         Ok(result)
     }
 
-    fn pay_bird_cost(&mut self, bird_card: &BirdCard) -> WingResult<Box<[Action]>> {
+    fn pay_bird_cost(&mut self, bird_card: &BirdCard) -> WingResult<Vec<Action>> {
         let (costs, total, is_alt) = bird_card.cost();
 
         if !is_enough_food_to_play_a_card(bird_card, &self.foods) {
             return Err(WingError::InvalidAction);
         }
 
-        let result: Box<[Action]> = match is_alt {
+        let result = match is_alt {
             crate::food::CostAlternative::Yes => {
                 // Note: No need to keep track of total cost since it does not appear in "/" (or CostAlternative::Yes) cards
 
@@ -128,9 +131,9 @@ impl Player {
                     let (food_idx, food_cost) = discard_options.pop().unwrap();
 
                     self.foods[food_idx] -= food_cost;
-                    Box::new([])
+                    vec![]
                 } else {
-                    Box::new([Action::DiscardFoodChoice(discard_options.into_boxed_slice())])
+                    vec![Action::DiscardFoodChoice(discard_options.into_boxed_slice())]
                 }
             },
             crate::food::CostAlternative::No => {

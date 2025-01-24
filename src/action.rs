@@ -1,4 +1,5 @@
 use crate::{error::{WingError, WingResult}, habitat::Habitat, wingspan_env::WingspanEnv};
+use pyo3::prelude::*;
 
 
 #[derive(Debug, Clone)]
@@ -85,7 +86,16 @@ impl Action {
                 env.current_player_mut().bird_cards.push(card);
                 Ok(())
             },
-            _ => todo!(),
+            Action::PlayBird => {
+                let mut followup_actions = env.current_player_mut().play_a_bird_card(action_idx)?;
+
+                env._action_queue.append(&mut followup_actions);
+                Ok(())
+            },
+            x => {
+                println!("Action not implemented: {:?}", x);
+                todo!()
+            },
         }
     }
 
@@ -141,5 +151,30 @@ impl Action {
             // Do it or not
             Action::DoThen(_, _) => 2,
         }
+    }
+}
+
+#[pyclass]
+#[derive(Debug, Clone)]
+pub struct PyAction {
+    inner: Action
+}
+
+impl From<Action> for PyAction {
+    fn from(inner: Action) -> Self {
+        Self { inner }
+    }
+}
+
+impl From<&Action> for PyAction {
+    fn from(inner: &Action) -> Self {
+        Self { inner: inner.clone() }
+    }
+}
+
+#[pymethods]
+impl PyAction {
+    pub fn __str__(&self) -> String {
+        format!("{:?}", self.inner)
     }
 }

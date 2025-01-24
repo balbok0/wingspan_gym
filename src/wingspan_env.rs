@@ -3,7 +3,7 @@ use rand::{rngs::StdRng, seq::SliceRandom, SeedableRng};
 
 use pyo3::{exceptions::PyValueError, prelude::*};
 
-use crate::{action::Action, bird_card::get_deck, bird_feeder::BirdFeeder, deck_and_holder::DeckAndHolder, error::{WingError, WingResult}, expansion::Expansion, habitat::Habitat, player::Player};
+use crate::{action::{Action, PyAction}, bird_card::get_deck, bird_feeder::BirdFeeder, deck_and_holder::DeckAndHolder, error::{WingError, WingResult}, expansion::Expansion, habitat::Habitat, player::Player};
 
 #[derive(Debug, Builder, Clone)]
 pub struct WingspanEnvConfig {
@@ -89,6 +89,7 @@ impl WingspanEnv {
 
     fn end_of_round(&mut self) {
         self._round_idx += 1;
+        self._player_idx = self._round_idx as usize % self.config.num_players;
 
         // TODO: End of round abilities
         // TODO: End of round goals
@@ -105,7 +106,6 @@ impl WingspanEnv {
         // unwrap is safe, since there is a check in the end
         let action = self._action_queue.last().unwrap().clone();
         if !action.is_performable(self) {
-            println!("Action is not performable");
             return Err(WingError::InvalidAction);
         }
         let action = self._action_queue.pop().unwrap();
@@ -118,11 +118,9 @@ impl WingspanEnv {
         while !self._action_queue.is_empty() && !self._action_queue.last().unwrap().clone().is_performable(self) {
             self._action_queue.pop();
         }
-        println!("After while check!");
 
         // Handle end of turn for the player
         if self._action_queue.is_empty() {
-            println!("Queue is empty");
             // Loop through players
             self._player_idx += 1;
 
@@ -148,15 +146,17 @@ impl WingspanEnv {
                         self._action_queue.push(Action::DiscardFoodOrBirdCard);
                     }
                 }
-            } else if self._round_idx == 3 {
-                // End of game is after Round 4 (0 - when it is zero indexed)
-                todo!("End of game todo!")
             } else {
                 self._player_idx %= self.config.num_players;
                 // Normal rounds
                 if self.current_player().turns_left == 0 {
                     // End of round
                     self.end_of_round();
+
+                    if self._round_idx == 4 {
+                        // End of game is after Round 4 (0 - when it is zero indexed)
+                        todo!("End of game todo!")
+                    }
                 } else {
                     // End of normal turn
                     self.end_of_turn();
@@ -168,17 +168,13 @@ impl WingspanEnv {
             }
         }
 
-        println!("Queue size: {:?}\n", self._action_queue);
         Ok(())
     }
 
     pub fn populate_action_queue_from_habitat_action(&mut self, habitat: &Habitat) {
         let mut actions = self.current_player_mut().mat.get_actions(habitat);
 
-        println!("Actions from queue: {actions:?}");
-
         self._action_queue.append(&mut actions);
-        println!("Current queue: {:?}", self._action_queue);
     }
 
     pub fn current_player(&self) -> &Player {
@@ -195,6 +191,10 @@ impl WingspanEnv {
 
     pub fn config(&self) -> &WingspanEnvConfig {
         &self.config
+    }
+
+    pub fn next_action(&self) -> Option<&Action> {
+        self._action_queue.last()
     }
 }
 
@@ -227,6 +227,16 @@ impl PyWingspanEnv {
         })
     }
 
+    #[getter]
+    pub fn player_idx(slf: &Bound<'_, Self>) -> usize {
+        slf.borrow().inner._player_idx
+    }
+
+    #[getter]
+    pub fn round_idx(slf: &Bound<'_, Self>) -> i8 {
+        slf.borrow().inner._round_idx
+    }
+
     #[pyo3(signature = (seed=None))]
     pub fn reset(slf: &Bound<'_, Self>, seed: Option<u64>) {
         slf.borrow_mut().inner.reset(seed)
@@ -250,5 +260,9 @@ impl PyWingspanEnv {
         let inner = &slf.borrow().inner;
 
         (inner._round_idx, inner._player_idx, inner._action_queue.last().map(|x| format!("{x:?}")), inner._players.clone())
+    }
+
+    pub fn next_action(slf: &Bound<'_, Self>) -> Option<PyAction> {
+        slf.borrow().inner.next_action().map(PyAction::from)
     }
 }
