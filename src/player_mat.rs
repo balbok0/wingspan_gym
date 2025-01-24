@@ -21,7 +21,7 @@ impl Default for MatRow {
 }
 
 impl MatRow {
-    pub fn row_to_play(&self) -> Option<u8> {
+    pub fn col_to_play(&self) -> Option<u8> {
         if self.birds.len() == 5 {
             return None;
         } else {
@@ -89,12 +89,12 @@ impl PlayerMat {
         card.habitats().iter().filter(|habitat| {
             let hab_row = self.get_row(habitat);
 
-            if let Some(row) = hab_row.row_to_play() {
+            if let Some(col) = hab_row.col_to_play() {
                 // There is a place in habitat.
                 // Check if we have enough eggs
-                let egg_req = (row + 1) / 2;
+                let egg_req = (col + 1) / 2;
 
-                if egg_req <= self.num_eggs {
+                if egg_req > self.num_eggs {
                     // Not enough eggs
                     return false;
                 }
