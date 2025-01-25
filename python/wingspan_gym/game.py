@@ -19,8 +19,8 @@ class WingspanEnv(gym.Env):
         if self._inner.step(action_idx) is None:
             return None, None, None, None, None
 
-    def num_choices(self) -> int:
-        return self._inner.num_choices()
+    def action_space_size(self) -> int:
+        return self._inner.action_space_size()
 
     def cur_player(self) -> int:
         return self._inner.player_idx

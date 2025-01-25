@@ -145,7 +145,7 @@ impl Action {
         }
     }
 
-    pub fn num_choices(&self, env: &WingspanEnv) -> usize {
+    pub fn action_space_size(&self, env: &WingspanEnv) -> usize {
         match self {
             Action::ChooseAction => 4,
             Action::PlayBird => {
@@ -166,6 +166,70 @@ impl Action {
             Action::DiscardEgg => env.current_player().mat.num_spots_to_discard_eggs(),
             // Do it or not
             Action::DoThen(_, _) => 2,
+        }
+    }
+
+    pub fn valid_actions(&self, env: &mut WingspanEnv) -> Vec<u8> {
+        match self {
+            Action::ChooseAction => {
+                if Action::PlayBird.is_performable(env) {
+                    vec![0, 1, 2, 3]
+                } else {
+                    vec![1, 2, 3]
+                }
+            },
+            Action::DiscardFoodOrBirdCard => {
+                let mut result = Action::DiscardFood.valid_actions(env);
+                result.extend(
+                    Action::DiscardBirdCard.valid_actions(env).into_iter().map(|idx| 5 + idx)
+                );
+                result
+            },
+            Action::DiscardFood => {
+                env
+                    .current_player()
+                    .foods
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(idx, food)| {
+                        if *food > 0 {
+                            Some(idx as u8)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect()
+            },
+            Action::DiscardFoodChoice(choices) => {
+                let foods = &env.current_player().foods;
+                choices
+                    .iter()
+                    .filter_map(|(idx, cost)| {
+                        if foods[*idx] >= *cost {
+                            Some(*idx as u8)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect()
+            },
+            Action::PlayBird
+                | Action::GetFood
+                | Action::GetFoodChoice(_)
+                | Action::GetEgg
+                | Action::GetBirdCard
+                | Action::DiscardBirdCard
+                | Action::DiscardEgg
+                => {
+                (0..self.action_space_size(env) as u8).into_iter().collect()
+            },
+            Action::DoThen(action_req, _) => {
+                if action_req.is_performable(env) {
+                    vec![0, 1]
+                } else {
+                    vec![1]
+                }
+            }
         }
     }
 }

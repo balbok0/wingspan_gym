@@ -115,8 +115,23 @@ impl WingspanEnv {
         };
 
         // Ensure that next action can be performed
-        while !self._action_queue.is_empty() && !self._action_queue.last().unwrap().clone().is_performable(self) {
-            self._action_queue.pop();
+        while !self._action_queue.is_empty() {
+            let next_action = self._action_queue.last().unwrap().clone();
+
+            // If next action is not performable, remove it
+            if !next_action.is_performable(self) {
+                self._action_queue.pop();
+                continue;
+            }
+
+            // If next action has only one valid action, just do it
+            let valid_actions = next_action.valid_actions( self);
+            if valid_actions.len() == 1 {
+                self.step(valid_actions[0])?;
+            } else {
+                // Next action is valid and has more than one option
+                break;
+            }
         }
 
         // Handle end of turn for the player
@@ -185,8 +200,8 @@ impl WingspanEnv {
         &mut self._players[self._player_idx]
     }
 
-    pub fn num_choices(&self) -> Option<usize> {
-        self._action_queue.last().map(|x| x.num_choices(&self))
+    pub fn action_space_size(&self) -> Option<usize> {
+        self._action_queue.last().map(|x| x.action_space_size(&self))
     }
 
     pub fn config(&self) -> &WingspanEnvConfig {
@@ -252,8 +267,8 @@ impl PyWingspanEnv {
         }
     }
 
-    pub fn num_choices(slf: &Bound<'_, Self>) -> Option<usize> {
-        slf.borrow().inner.num_choices()
+    pub fn action_space_size(slf: &Bound<'_, Self>) -> Option<usize> {
+        slf.borrow().inner.action_space_size()
     }
 
     pub fn _debug_get_state(slf: &Bound<'_, Self>) -> (i8, usize, Option<String>, Vec<Player>) {
