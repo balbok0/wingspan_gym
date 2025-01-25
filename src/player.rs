@@ -53,7 +53,7 @@ impl Player {
         Ok(())
     }
 
-    pub fn discard_food(&mut self, index: usize) -> WingResult<()> {
+    pub fn discard_food(&mut self, index: usize, num_food: u8) -> WingResult<()> {
         if index >= self.foods.len() {
             return Err(WingError::InvalidAction);
         }
@@ -61,13 +61,13 @@ impl Player {
             return Err(WingError::InvalidAction);
         }
 
-        self.foods[index] -= 1;
+        self.foods[index] -= num_food;
         Ok(())
     }
 
     pub fn discard_food_or_bird_card(&mut self, index: usize) -> WingResult<()> {
         if index < 5 {
-            self.discard_food(index)
+            self.discard_food(index, 1)
         } else {
             self.discard_bird_card(index - 5)
         }

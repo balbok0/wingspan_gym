@@ -22,6 +22,12 @@ class WingspanEnv(gym.Env):
     def num_choices(self) -> int:
         return self._inner.num_choices()
 
+    def cur_player(self) -> int:
+        return self._inner.player_idx
+
+    def cur_round(self) -> int:
+        return self._inner.round_idx
+
     def _debug_print_state(self):
         round_idx, player_idx, action, players = self._inner._debug_get_state()
         print(f"Current round: {round_idx}")
@@ -41,3 +47,6 @@ class WingspanEnv(gym.Env):
         print("  Mat:")
         for row_type, birds in zip(["F", "G", "W"], placed_birds):
             print(f"    {row_type}: {birds}")
+
+    def next_action(self):
+        return self._inner.next_action()

@@ -32,15 +32,6 @@ pub enum Action {
 impl Action {
     pub fn perform_action(&self, action_idx: u8, env: &mut WingspanEnv) -> WingResult<()> {
         match self {
-            Action::DiscardFoodOrBirdCard => {
-                env.current_player_mut().discard_food_or_bird_card(action_idx as usize)
-            },
-            Action::DiscardBirdCard => {
-                env.current_player_mut().discard_bird_card(action_idx as usize)
-            },
-            Action::DiscardFood => {
-                env.current_player_mut().discard_food(action_idx as usize)
-            },
             Action::ChooseAction => {
                 let habitat = match action_idx {
                     1 => Habitat::Forest,
@@ -65,6 +56,12 @@ impl Action {
 
                 Ok(())
             },
+            Action::PlayBird => {
+                let mut followup_actions = env.current_player_mut().play_a_bird_card(action_idx)?;
+
+                env._action_queue.append(&mut followup_actions);
+                Ok(())
+            },
             Action::GetFood => {
                 match env._bird_feeder.take_dice_and_update_state(&mut env.rng, action_idx)? {
                     crate::bird_feeder::BirdFeederActionResult::GainFood(food_idx) => env.current_player_mut().foods[food_idx] += 1,
@@ -81,17 +78,42 @@ impl Action {
                     Ok(())
                 }
             },
+            Action::GetEgg => env.current_player_mut().mat.place_egg(action_idx),
             Action::GetBirdCard => {
                 let card = env._bird_deck.draw_card(action_idx)?;
                 env.current_player_mut().bird_cards.push(card);
                 Ok(())
             },
-            Action::PlayBird => {
-                let mut followup_actions = env.current_player_mut().play_a_bird_card(action_idx)?;
-
-                env._action_queue.append(&mut followup_actions);
-                Ok(())
+            Action::DiscardFoodOrBirdCard => {
+                env.current_player_mut().discard_food_or_bird_card(action_idx as usize)
             },
+            Action::DiscardBirdCard => {
+                env.current_player_mut().discard_bird_card(action_idx as usize)
+            },
+            Action::DiscardFood => {
+                env.current_player_mut().discard_food(action_idx as usize, 1)
+            },
+            Action::DiscardFoodChoice(choices) => {
+                let (food_idx, num_food) = choices.get(action_idx as usize).ok_or(WingError::InvalidAction)?;
+
+                env.current_player_mut().discard_food(*food_idx, *num_food)
+            },
+            Action::DiscardEgg => env.current_player_mut().mat.discard_egg(action_idx),
+            Action::DoThen(a, b) => {
+                match action_idx {
+                    0 => {
+                        // Option accepted
+                        env._action_queue.push(*b.clone());
+                        env._action_queue.push(*a.clone());
+                        Ok(())
+                    },
+                    1 => {
+                        // Option rejected
+                        Ok(())
+                    },
+                    _ => Err(WingError::InvalidAction)
+                }
+            }
             x => {
                 println!("Action not implemented: {:?}", x);
                 todo!()
@@ -129,6 +151,10 @@ impl Action {
             Action::PlayBird => {
                 env.current_player()._playable_card_hab_combos.len()
             },
+            Action::GetFood => env._bird_feeder.num_actions(),
+            Action::GetFoodChoice(choices) => choices.len(),
+            Action::GetEgg => env.current_player().mat.num_spots_to_place_eggs(),
+            Action::GetBirdCard => env._bird_deck.num_actions(),
             Action::DiscardFoodOrBirdCard => {
                 5 + env.current_player().bird_cards.len()
             },
@@ -137,17 +163,7 @@ impl Action {
             }
             Action::DiscardFood => 5,
             Action::DiscardFoodChoice(choices) => choices.len(),
-            Action::GetBirdCard => env._bird_deck.num_actions(),
-            Action::GetEgg => {
-                // Implement egg locations checks in mat
-                todo!()
-            },
-            Action::GetFood => env._bird_feeder.num_actions(),
-            Action::GetFoodChoice(choices) => choices.len(),
-            Action::DiscardEgg => {
-                // Implement egg locations checks in mat
-                todo!()
-            },
+            Action::DiscardEgg => env.current_player().mat.num_spots_to_discard_eggs(),
             // Do it or not
             Action::DoThen(_, _) => 2,
         }

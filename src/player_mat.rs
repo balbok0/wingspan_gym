@@ -33,6 +33,63 @@ impl MatRow {
         // TODO: Implement bird actions and then populate this stuff
         vec![]
     }
+
+    pub fn num_spots_to_place_eggs(&self) -> usize {
+        self.eggs.iter()
+            .zip(self.eggs_cap)
+            .filter(|(eggs, cap)| *eggs < cap)
+            .count()
+    }
+
+    pub fn num_spots_to_discard_eggs(&self) -> usize {
+        self.eggs.iter()
+            .filter(|eggs| **eggs > 0)
+            .count()
+    }
+
+    pub fn place_egg(&mut self, idx: usize) -> Result<(), usize> {
+        let mut count = 0;
+
+        for (col_idx, (egg, cap)) in self.eggs.iter().zip(self.eggs_cap).enumerate() {
+            let egg = *egg;
+            if egg < cap {
+                // Valid spot to put egg in
+                if count == idx {
+                    // This is the requested spot
+                    self.eggs[col_idx] += 1;
+                    return Ok(())
+                } else {
+                    // Not yet the requested spot
+                    count += 1;
+                }
+            }
+        }
+
+        // Requested spot not found, so return number of valid spots in this row
+        Err(count)
+    }
+
+    pub fn discard_egg(&mut self, idx: usize) -> Result<(), usize> {
+        let mut count = 0;
+
+        for (col_idx, egg) in self.eggs.iter().enumerate() {
+            let egg = *egg;
+            if egg > 0 {
+                // Valid spot to discard egg from
+                if count == idx {
+                    // This is the requested spot
+                    self.eggs[col_idx] -= 1;
+                    return Ok(())
+                } else {
+                    // Not yet the requested spot
+                    count += 1;
+                }
+            }
+        }
+
+        // Requested spot not found, so return number of valid spots in this row
+        Err(count)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -108,7 +165,7 @@ impl PlayerMat {
         }).cloned().collect()
     }
 
-    pub fn get_actions(&self, habitat: &Habitat) -> Vec<Action> {
+    pub fn get_actions_from_habitat_action(&self, habitat: &Habitat) -> Vec<Action> {
         let hab_action = habitat.action();
         let hab_row = self.get_row(&habitat);
 
@@ -127,6 +184,52 @@ impl PlayerMat {
         }
 
         result
+    }
+
+    pub fn num_spots_to_place_eggs(&self) -> usize {
+        [&self.forest, &self.grassland, &self.wetland].map(|a| MatRow::num_spots_to_place_eggs(a)).iter().sum()
+    }
+
+    pub fn num_spots_to_discard_eggs(&self) -> usize {
+        [&self.forest, &self.grassland, &self.wetland].map(|a| MatRow::num_spots_to_discard_eggs(a)).iter().sum()
+    }
+
+    pub fn place_egg(&mut self, idx: u8) -> WingResult<()> {
+        let idx = idx as usize;
+        let mut cur_action_count = 0;
+        for hab_row in [&mut self.forest, &mut self.grassland, &mut self.wetland] {
+            match hab_row.place_egg(idx - cur_action_count) {
+                Ok(()) => {
+                    self.num_eggs += 1;
+                    return Ok(());
+                }
+                Err(num_actions_in_row) => {
+                    cur_action_count += num_actions_in_row;
+                }
+            }
+        }
+
+        // No places found to place eggs, so this was an invalid action
+        Err(WingError::InvalidAction)
+    }
+
+    pub fn discard_egg(&mut self, idx: u8) -> WingResult<()> {
+        let idx = idx as usize;
+        let mut cur_action_count = 0;
+        for hab_row in [&mut self.forest, &mut self.grassland, &mut self.wetland] {
+            match hab_row.place_egg(idx - cur_action_count) {
+                Ok(()) => {
+                    self.num_eggs -= 1;
+                    return Ok(());
+                }
+                Err(num_actions_in_row) => {
+                    cur_action_count += num_actions_in_row;
+                }
+            }
+        }
+
+        // No places found to place eggs, so this was an invalid action
+        Err(WingError::InvalidAction)
     }
 
     pub fn can_place_egg(&self) -> bool {
