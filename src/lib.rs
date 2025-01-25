@@ -7,6 +7,7 @@ pub mod wingspan_env;
 
 mod action;
 mod bird_feeder;
+mod bonus_card;
 mod deck_and_holder;
 mod error;
 mod expansion;

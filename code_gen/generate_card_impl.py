@@ -2,22 +2,23 @@ from pathlib import Path
 
 import polars as pl
 
-from utils import load_all_cards, FOOD_TYPES, HABITATS
+from utils import load_all_cards, FOOD_TYPES, HABITATS, common_name_to_enum_name
 
 bird_impl_file_path = Path(__file__).parent.parent / "src" / "bird_card" / "bird_card_impl.rs"
 
 
 def main():
-    birds, bonus, goals = load_all_cards()
+    birds, bonuses, goals = load_all_cards()
 
     enum_names = []
 
     with open(bird_impl_file_path, mode="w") as f:
         # Imports
         f.writelines([
+            "// This code is generated automatically via a script in code_gen/ folder\n",
             "use strum_macros::EnumIter;\n\n",
             "use super::BirdCardColor;\n",
-            "use crate::{{habitat::Habitat, expansion::Expansion, nest::NestType, food::{{BirdCardCost, CostAlternative}}}};\n",
+            "use crate::{{bonus_card::BonusCard, habitat::Habitat, expansion::Expansion, food::{{BirdCardCost, CostAlternative}}, nest::NestType}};\n",
         ])
 
         # Start with enum
@@ -209,7 +210,7 @@ def main():
             "  }\n"
         ])
 
-        # expansions
+        # Expansions
         f.writelines([
             "\n",
             "  pub fn expansion(&self) -> Expansion {\n",
@@ -220,6 +221,29 @@ def main():
             exp_val = f"Expansion::{row['expansion'].capitalize()}"
             expansion_lines.append(
                 f"      Self::{row['enum_name']} => {exp_val},\n"
+            )
+        f.writelines([
+            *expansion_lines,
+            "    }\n",
+            "  }\n"
+        ])
+
+        # Bonus card membership
+        f.writelines([
+            "\n",
+            "  pub fn bonus_card_membership(&self) -> Vec<BonusCard> {\n",
+            "    match self {\n",
+        ])
+        expansion_lines = []
+        column_names = set(birds.columns) & set(bonuses["Bonus card"])
+        for row in birds.iter_rows(named=True):
+            card_membership = []
+            for column in column_names:
+                if row[column] == "X":
+                    card_membership.append(f"BonusCard::{common_name_to_enum_name(column)}")
+
+            expansion_lines.append(
+                f"      Self::{row['enum_name']} => vec![{', '.join(card_membership)}],\n"
             )
         f.writelines([
             *expansion_lines,

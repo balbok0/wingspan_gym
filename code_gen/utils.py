@@ -15,6 +15,10 @@ def load_all_cards():
     bonus = pl.read_excel(spread_sheet_path, sheet_name="Bonus").with_row_index()
     goals = pl.read_excel(spread_sheet_path, sheet_name="Goals").with_row_index()
 
+    bonus = bonus.filter(
+        ~pl.col("Bonus card").str.starts_with("[automa]")
+    )
+
     # For now, just core package
     set_col = pl.col("Set").str.split(", ").list.first().alias("expansion")
     is_in_extensions = set_col.list.set_intersection(["core"]).list.len() > 0
@@ -38,7 +42,6 @@ def load_all_cards():
 
     bonus = bonus.with_columns(
         pl.col("Bonus card").map_elements(common_name_to_enum_name, return_dtype=pl.String).alias("enum_name"),
-    ).with_columns(
         pl.col("VP").map_elements(bonus_vp_to_scoring, return_dtype=pl.String).alias("points_expr"),
     )
 
