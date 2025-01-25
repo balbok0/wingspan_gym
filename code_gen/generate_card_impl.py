@@ -1,51 +1,14 @@
 from pathlib import Path
 
 import polars as pl
-import unidecode
+
+from utils import load_all_cards, FOOD_TYPES, HABITATS
 
 bird_impl_file_path = Path(__file__).parent.parent / "src" / "bird_card" / "bird_card_impl.rs"
 
 
-FOOD_TYPES = ["Invertebrate", "Seed", "Fish", "Fruit", "Rodent"]
-HABITATS = ["Forest", "Grassland", "Wetland"]
-
-
-def __load_all_cards():
-    spread_sheet_path = Path(__file__).parent.parent / "data/wingspan-20221201.xlsx"
-
-    birds = pl.read_excel(spread_sheet_path, sheet_name="Birds").with_row_index()
-    bonus = pl.read_excel(spread_sheet_path, sheet_name="Bonus").with_row_index()
-    goals = pl.read_excel(spread_sheet_path, sheet_name="Goals").with_row_index()
-
-    # For now, just core package
-    is_in_extensions = pl.col("Set").str.split(", ").list.set_intersection(["core"]).list.len() > 0
-    birds = birds.filter(is_in_extensions)
-    bonus = bonus.filter(is_in_extensions)
-    goals = goals.filter(is_in_extensions)
-
-    # Modify birds so that columns are nicer
-    into_int_expr = lambda col: pl.col(col).cast(pl.Int8, strict=False)
-    birds = birds.with_columns(
-        *[into_int_expr(col) for col in FOOD_TYPES],
-        (pl.col("/ (food cost)") == "/").fill_null(False).alias("food_cost_alt"),
-        into_int_expr("Total food cost").alias("Total"),
-        *[(pl.col(col) == "X").fill_null(False).alias(col) for col in ["Forest", "Grassland", "Wetland"]],
-        pl.col("Color").fill_null("None").alias("Color"),
-        into_int_expr("Victory points").fill_null(0).alias("Victory points"),
-        pl.col("Nest type").fill_null("None").alias("Nest type"),
-        (pl.col("Predator") == "X").fill_null(False).alias("is_predator"),
-    )
-
-    return birds, bonus, goals
-
-
-def common_name_to_enum_name(name: str) -> str:
-    return unidecode.unidecode(name.strip().replace(" ", "").replace("'", "").replace("-", ""), )
-
-
-
 def main():
-    birds, bonus, goals = __load_all_cards()
+    birds, bonus, goals = load_all_cards()
 
     enum_names = []
 
@@ -54,7 +17,7 @@ def main():
         f.writelines([
             "use strum_macros::EnumIter;\n\n",
             "use super::BirdCardColor;\n",
-            "use crate::{{habitat::Habitat, nest::NestType, food::{{BirdCardCost, CostAlternative}}}};\n",
+            "use crate::{{habitat::Habitat, expansion::Expansion, nest::NestType, food::{{BirdCardCost, CostAlternative}}}};\n",
         ])
 
         # Start with enum
@@ -64,13 +27,9 @@ def main():
         ])
 
         for bird in birds.iter_rows(named=True):
-            enum_name = common_name_to_enum_name(bird["Common name"])
+            enum_name = bird["enum_name"]
             f.write(f"  {enum_name},\n")
-
-            enum_names.append(enum_name)
         f.write("}\n")
-
-        birds.insert_column(0, column=pl.Series("enum_name", enum_names))
 
         # Impl block
         f.writelines([
@@ -192,7 +151,7 @@ def main():
             # NOTE: Flightless birds are "*"
             wingspan_val = (
                 "None"
-                if row["Wingspan"] == "*" else
+                if row["Wingspan"] is None or row["Wingspan"] == "*" else
                 f"Some({row['Wingspan']})"
             )
             wingspan_lines.append(
@@ -250,11 +209,26 @@ def main():
             "  }\n"
         ])
 
+        # expansions
+        f.writelines([
+            "\n",
+            "  pub fn expansion(&self) -> Expansion {\n",
+            "    match self {\n",
+        ])
+        expansion_lines = []
+        for row in birds.iter_rows(named=True):
+            exp_val = f"Expansion::{row['expansion'].capitalize()}"
+            expansion_lines.append(
+                f"      Self::{row['enum_name']} => {exp_val},\n"
+            )
+        f.writelines([
+            *expansion_lines,
+            "    }\n",
+            "  }\n"
+        ])
+
         # Close impl block
         f.write("}\n")
-
-
-
 
 
 if __name__ == "__main__":

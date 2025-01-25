@@ -11,7 +11,7 @@ pub struct WingspanEnvConfig {
     pub(crate) hand_limit: u8,
     #[builder(setter(into), default = 2)]
     pub(crate) num_players: usize,
-    #[builder(default = vec![])]
+    #[builder(default = vec![Expansion::Core])]
     expansions: Vec<Expansion>,
 }
 

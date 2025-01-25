@@ -3,4 +3,6 @@ pub enum BirdCardColor {
     Brown,
     Pink,
     None,
+    Teal,
+    Yellow,
 }

@@ -2,6 +2,8 @@
 pub mod bird_card_constants;
 pub mod bird_card_impl;
 
+use std::collections::HashSet;
+
 pub use bird_card_impl::*;
 pub use bird_card_constants::*;
 use strum::IntoEnumIterator;
@@ -10,11 +12,15 @@ use crate::{expansion::Expansion, food::Foods};
 
 
 pub(crate) fn get_deck(expansions: &[Expansion]) -> Vec<BirdCard> {
-    if expansions.len() != 0 {
+    if expansions.len() != 1 && expansions.first().unwrap() != &Expansion::Core {
         todo!("Only core is supported so far. Expansions add new logic which we have not implemented yet.")
     }
 
-    Vec::from_iter(BirdCard::iter())
+    let expansions = HashSet::<Expansion>::from_iter(expansions.into_iter().cloned());
+
+    BirdCard::iter()
+        .filter(|bc| expansions.contains(&bc.expansion()))
+        .collect()
 }
 
 pub(crate) fn is_enough_food_to_play_a_card(card: &BirdCard, player_food: &Foods) -> bool {
