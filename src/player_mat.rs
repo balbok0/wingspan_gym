@@ -217,7 +217,7 @@ impl PlayerMat {
         let idx = idx as usize;
         let mut cur_action_count = 0;
         for hab_row in [&mut self.forest, &mut self.grassland, &mut self.wetland] {
-            match hab_row.place_egg(idx - cur_action_count) {
+            match hab_row.discard_egg(idx - cur_action_count) {
                 Ok(()) => {
                     self.num_eggs -= 1;
                     return Ok(());
