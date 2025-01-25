@@ -3,7 +3,7 @@ use rand::{rngs::StdRng, seq::SliceRandom, SeedableRng};
 
 use pyo3::{exceptions::PyValueError, prelude::*};
 
-use crate::{action::{Action, PyAction}, bird_card::get_deck, bird_feeder::BirdFeeder, deck_and_holder::DeckAndHolder, error::{WingError, WingResult}, expansion::Expansion, habitat::Habitat, player::Player};
+use crate::{action::{Action, PyAction}, bird_card::get_deck, bird_feeder::BirdFeeder, deck_and_holder::DeckAndHolder, error::{WingError, WingResult}, expansion::Expansion, habitat::Habitat, player::Player, step_result::StepResult};
 
 #[derive(Debug, Builder, Clone)]
 pub struct WingspanEnvConfig {
@@ -101,7 +101,12 @@ impl WingspanEnv {
         self._bird_deck.reset_display();
     }
 
-    pub fn step(&mut self, action_idx: u8) -> WingResult<()> {
+    pub fn step(&mut self, action_idx: u8) -> WingResult<StepResult> {
+        if self._round_idx == 4 {
+            println!("Action queue: {:?}", self._action_queue);
+            // We have terminated / End of round
+            return Ok(StepResult::Terminated);
+        }
 
         // unwrap is safe, since there is a check in the end
         let action = self._action_queue.last().unwrap().clone();
@@ -170,7 +175,7 @@ impl WingspanEnv {
 
                     if self._round_idx == 4 {
                         // End of game is after Round 4 (0 - when it is zero indexed)
-                        todo!("End of game todo!")
+                        return Ok(StepResult::Terminated);
                     }
                 } else {
                     // End of normal turn
@@ -183,7 +188,7 @@ impl WingspanEnv {
             }
         }
 
-        Ok(())
+        Ok(StepResult::Live)
     }
 
     pub fn populate_action_queue_from_habitat_action(&mut self, habitat: &Habitat) {
@@ -257,11 +262,11 @@ impl PyWingspanEnv {
         slf.borrow_mut().inner.reset(seed)
     }
 
-    pub fn step(slf: &Bound<'_, Self>, action_idx: u8) -> PyResult<Option<()>> {
+    pub fn step(slf: &Bound<'_, Self>, action_idx: u8) -> PyResult<Option<StepResult>> {
         match slf.borrow_mut().inner.step(action_idx) {
             // Ok(x) => return Ok(Some(x)),
             // FIXME: for now returning none, so it doesn't freak out
-            Ok(_x) => return Ok(None),
+            Ok(x) => return Ok(Some(x)),
             Err(WingError::InvalidAction) => return Ok(None),
             Err(x) => return Err(x.into()),
         }

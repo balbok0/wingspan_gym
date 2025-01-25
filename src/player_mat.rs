@@ -1,19 +1,23 @@
 use crate::{action::Action, bird_card::BirdCard, error::{WingError, WingResult}, habitat::Habitat};
 
-type EggsRow = [u8; 5];
+type BirdResourceRow = [u8; 5];
 
 
 #[derive(Debug, Clone)]
 pub struct MatRow {
     pub birds: Vec<BirdCard>,
-    pub eggs: EggsRow,
-    pub eggs_cap: EggsRow,
+    pub tucked_cards: BirdResourceRow,
+    pub cached_food: BirdResourceRow,
+    pub eggs: BirdResourceRow,
+    pub eggs_cap: BirdResourceRow,
 }
 
 impl Default for MatRow {
     fn default() -> Self {
         Self {
             birds: Vec::with_capacity(5),
+            tucked_cards: [0, 0, 0, 0, 0],
+            cached_food: [0, 0, 0, 0, 0],
             eggs: [0, 0, 0, 0, 0],
             eggs_cap: [0, 0, 0, 0, 0],
         }
@@ -187,11 +191,11 @@ impl PlayerMat {
     }
 
     pub fn num_spots_to_place_eggs(&self) -> usize {
-        [&self.forest, &self.grassland, &self.wetland].map(|a| MatRow::num_spots_to_place_eggs(a)).iter().sum()
+        self.rows().map(|a| MatRow::num_spots_to_place_eggs(a)).iter().sum()
     }
 
     pub fn num_spots_to_discard_eggs(&self) -> usize {
-        [&self.forest, &self.grassland, &self.wetland].map(|a| MatRow::num_spots_to_discard_eggs(a)).iter().sum()
+        self.rows().map(|a| MatRow::num_spots_to_discard_eggs(a)).iter().sum()
     }
 
     pub fn place_egg(&mut self, idx: u8) -> WingResult<()> {
@@ -251,5 +255,13 @@ impl PlayerMat {
             self.eggs_cap += egg_cap;
             Ok(())
         }
+    }
+
+    pub fn rows(&self) -> [&MatRow; 3] {
+        [&self.forest, &self.grassland, &self.wetland]
+    }
+
+    pub fn egg_count(&self) -> u8 {
+        self.num_eggs
     }
 }

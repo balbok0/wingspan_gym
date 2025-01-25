@@ -16,8 +16,7 @@ class WingspanEnv(gym.Env):
         self._inner.reset(seed)
 
     def step(self, action_idx: int):
-        if self._inner.step(action_idx) is None:
-            return None, None, None, None, None
+        return self._inner.step(action_idx)
 
     def action_space_size(self) -> int:
         return self._inner.action_space_size()

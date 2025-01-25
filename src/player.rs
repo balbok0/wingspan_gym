@@ -13,6 +13,8 @@ pub struct Player {
 
     pub(crate) mat: PlayerMat,
 
+    end_of_round_points: u8,
+
     // Optimization that uses a fact, that before every bird play we check for resources etc.
     pub(crate) _playable_card_hab_combos: Vec<(BirdCard, Habitat, usize)>
 }
@@ -24,6 +26,7 @@ impl Default for Player {
             bird_cards: vec![],
             turns_left: 8,
             mat: Default::default(),
+            end_of_round_points: 0,
             _playable_card_hab_combos: vec![],
         }
     }
@@ -32,11 +35,8 @@ impl Default for Player {
 impl Player {
     pub fn new(bird_cards: Vec<BirdCard>) -> Self {
         Self {
-            foods: [1, 1, 1, 1, 1],
             bird_cards,
-            turns_left: 8,
-            mat: Default::default(),
-            _playable_card_hab_combos: vec![],
+            ..Default::default()
         }
     }
 
@@ -160,6 +160,34 @@ impl Player {
 
     pub fn can_discard_bird_card(&self) -> bool {
         self.bird_cards.len() > 0
+    }
+
+    pub fn calculate_points(&self) -> u8 {
+        // Get points from birds
+        let bird_points: u8 = self.mat
+            .rows()
+            .iter()
+            .map(|mat_row| mat_row.birds.iter().map(|b| b.points()).sum::<u8>())
+            .sum();
+
+        // Get points from eggs
+        let egg_points = self.mat.egg_count();
+
+        // Points from tucked cards
+        let tucked_cards: u8 = self.mat
+            .rows()
+            .iter()
+            .map(|mat_row| mat_row.tucked_cards.iter().sum::<u8>())
+            .sum();
+
+        // Points from cached cards
+        let cached_food: u8 = self.mat
+            .rows()
+            .iter()
+            .map(|mat_row| mat_row.cached_food.iter().sum::<u8>())
+            .sum();
+
+        self.end_of_round_points + bird_points + egg_points + tucked_cards + cached_food
     }
 }
 
