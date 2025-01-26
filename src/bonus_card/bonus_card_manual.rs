@@ -15,7 +15,7 @@ impl BonusCard {
         match self {
             BonusCard::BreedingManager => {
                 // Birds that have at least 4 eggs laid on them
-                player.mat.rows().iter()
+                player.get_mat().rows().iter()
                     .flat_map(|mat_row| {
                         mat_row.get_eggs()
                             .iter()
@@ -25,14 +25,14 @@ impl BonusCard {
             },
             BonusCard::Ecologist => {
                 // Birds in your habitat with the fewest birds.
-                player.mat.rows().iter()
+                player.get_mat().rows().iter()
                     .map(|mat_row| mat_row.get_birds().len())
                     .min()
                     .unwrap()
             },
             BonusCard::Oologist => {
                 // Birds that have at least 1 egg laid on them
-                player.mat.rows().iter()
+                player.get_mat().rows().iter()
                     .flat_map(|mat_row| {
                         mat_row.get_eggs()
                             .iter()
@@ -42,11 +42,11 @@ impl BonusCard {
             },
             BonusCard::VisionaryLeader => {
                 // Bird cards in hand at end of game
-                player.bird_cards.len()
+                player.get_bird_cards().len()
             },
             BonusCard::Behaviorist => {
                 // For each column that contains birds with 3 different power colors:
-                let bird_cards = player.mat.rows().map(|r| r.get_birds());
+                let bird_cards = player.get_mat().rows().map(|r| r.get_birds());
 
                 let num_columns = bird_cards.iter().map(|row| row.len()).min().unwrap();
 
@@ -67,7 +67,7 @@ impl BonusCard {
             },
             BonusCard::CitizenScientist => {
                 // Birds with tucked cards
-                player.mat.rows().iter()
+                player.get_mat().rows().iter()
                     .flat_map(|mat_row| {
                         mat_row.get_tucked_cards()
                             .iter()
@@ -77,7 +77,7 @@ impl BonusCard {
             },
             BonusCard::Ethologist => {
                 // In any one habitat: 2pts per Power Color
-                player.mat.rows().iter()
+                player.get_mat().rows().iter()
                     .flat_map(|mat_row| {
                         mat_row.get_birds()
                             .iter()
@@ -94,7 +94,7 @@ impl BonusCard {
                     BonusCard::WetlandDataAnalyst => Habitat::Wetland,
                     _ => panic!("Wut")
                 };
-                let birds = player.mat.get_row(&habitiat).get_birds();
+                let birds = player.get_mat().get_row(&habitiat).get_birds();
 
                 // 2 or less birds is pre-defined result
                 if birds.len() <= 2 {
@@ -175,7 +175,7 @@ impl BonusCard {
             BonusCard::MechanicalEngineer => {
                 // Sets of the 4 nest types / 1 set = [bowl] [cavity] [ground] [platform]
                 // Each star nest can be treated as any 1 nest type. No card can be part of more than 1 set.
-                player.mat.rows().iter()
+                player.get_mat().rows().iter()
                     .filter(|mat_row| {
                         // Unique standard nest types
                         let unique_types = mat_row.get_birds()
@@ -206,7 +206,7 @@ impl BonusCard {
             },
             BonusCard::AvianTheriogenologist => {
                 // Birds with completely full nests
-                player.mat.rows().iter()
+                player.get_mat().rows().iter()
                     .map(
                         |row|
                         row.get_eggs().iter().zip(row.get_eggs_cap()).filter(|(eggs, eggs_cap)| {
@@ -224,7 +224,7 @@ impl BonusCard {
                     BonusCard::WetlandPopulationMonitor => Habitat::Wetland,
                     _ => panic!("wut"),
                 };
-                let mat_row = player.mat.get_row(&&habitat);
+                let mat_row = player.get_mat().get_row(&&habitat);
 
                 // Unique standard nest types
                 let unique_types = mat_row.get_birds()
@@ -256,7 +256,7 @@ impl BonusCard {
                     BonusCard::WetlandPopulationMonitor => Habitat::Wetland,
                     _ => panic!("wut"),
                 };
-                let birds = player.mat.get_row(&&habitat).get_birds();
+                let birds = player.get_mat().get_row(&&habitat).get_birds();
 
                 let mut longest_chain_count = 0;
 
@@ -326,11 +326,11 @@ impl BonusCard {
             },
             BonusCard::WinterFeeder => {
                 // Food remaining in your supply at end of game
-                player.foods.iter().cloned().sum::<u8>() as usize
+                player.get_foods().iter().cloned().sum::<u8>() as usize
             },
             _ => {
                 // All of the bonus cards that have a column in birds sheet
-                player.bird_cards
+                player.get_bird_cards()
                     .iter()
                     .filter(|bc| bc.bonus_card_membership().contains(&self))
                     .count()

@@ -192,7 +192,7 @@ impl WingspanEnv {
     }
 
     pub fn populate_action_queue_from_habitat_action(&mut self, habitat: &Habitat) {
-        let mut actions = self.current_player_mut().mat.get_actions_from_habitat_action(habitat);
+        let mut actions = self.current_player_mut().get_mat_mut().get_actions_from_habitat_action(habitat);
 
         self._action_queue.append(&mut actions);
     }

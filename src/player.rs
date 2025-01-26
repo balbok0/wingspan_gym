@@ -6,17 +6,17 @@ use pyo3::prelude::*;
 #[pyclass]
 pub struct Player {
     #[pyo3(get)]
-    pub(crate) foods: Foods,
-    pub(crate) bird_cards: Vec<BirdCard>,
+    foods: Foods,
+    bird_cards: Vec<BirdCard>,
     #[pyo3(get)]
-    pub(crate) turns_left: u8,
+    pub(crate)  turns_left: u8,
 
-    pub(crate) mat: PlayerMat,
+    mat: PlayerMat,
 
     end_of_round_points: u8,
 
     // Optimization that uses a fact, that before every bird play we check for resources etc.
-    pub(crate) _playable_card_hab_combos: Vec<(BirdCard, Habitat, usize)>
+    _playable_card_hab_combos: Vec<(BirdCard, Habitat, usize)>
 }
 
 impl Default for Player {
@@ -54,7 +54,7 @@ impl Player {
     }
 
     pub fn discard_food(&mut self, index: usize, num_food: u8) -> WingResult<()> {
-        if index >= self.foods.len() {
+        if index >= self.get_foods().len() {
             return Err(WingError::InvalidAction);
         }
         if self.foods[index] == 0 {
@@ -156,7 +156,7 @@ impl Player {
     }
 
     pub fn can_discard_food(&self) -> bool {
-        self.foods.iter().sum::<u8>() > 0
+        self.get_foods().iter().sum::<u8>() > 0
     }
 
     pub fn can_discard_bird_card(&self) -> bool {
@@ -189,6 +189,35 @@ impl Player {
             .sum();
 
         self.end_of_round_points + bird_points + egg_points + tucked_cards + cached_food
+    }
+
+    pub fn add_bird_card(&mut self, bird_card: BirdCard) {
+        self.bird_cards.push(bird_card);
+    }
+
+    pub fn add_food(&mut self, food_idx: usize, food_count: u8) {
+        self.foods[food_idx] += food_count;
+    }
+
+
+    pub fn get_bird_cards(&self) -> &Vec<BirdCard> {
+        &self.bird_cards
+    }
+
+    pub fn get_foods(&self) -> &Foods {
+        &self.foods
+    }
+
+    pub fn get_mat(&self) -> &PlayerMat {
+        &self.mat
+    }
+
+    pub fn get_mat_mut(&mut self) -> &mut PlayerMat {
+        &mut self.mat
+    }
+
+    pub fn get_playable_card_hab_combos(&self) -> &Vec<(BirdCard, Habitat, usize)> {
+        &self._playable_card_hab_combos
     }
 }
 
