@@ -268,7 +268,7 @@ impl PyWingspanEnv {
             // FIXME: for now returning none, so it doesn't freak out
             Ok(x) => return Ok(Some(x)),
             Err(WingError::InvalidAction) => return Ok(None),
-            Err(x) => return Err(x.into()),
+            // Err(x) => return Err(x.into()),
         }
     }
 

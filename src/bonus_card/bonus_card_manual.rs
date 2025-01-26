@@ -17,7 +17,7 @@ impl BonusCard {
                 // Birds that have at least 4 eggs laid on them
                 player.mat.rows().iter()
                     .flat_map(|mat_row| {
-                        mat_row.eggs
+                        mat_row.get_eggs()
                             .iter()
                             .filter(|eggs| **eggs >= 4)
                     })
@@ -26,7 +26,7 @@ impl BonusCard {
             BonusCard::Ecologist => {
                 // Birds in your habitat with the fewest birds.
                 player.mat.rows().iter()
-                    .map(|mat_row| mat_row.birds.len())
+                    .map(|mat_row| mat_row.get_birds().len())
                     .min()
                     .unwrap()
             },
@@ -34,7 +34,7 @@ impl BonusCard {
                 // Birds that have at least 1 egg laid on them
                 player.mat.rows().iter()
                     .flat_map(|mat_row| {
-                        mat_row.eggs
+                        mat_row.get_eggs()
                             .iter()
                             .filter(|eggs| **eggs >= 1)
                     })
@@ -69,7 +69,7 @@ impl BonusCard {
                 // Birds with tucked cards
                 player.mat.rows().iter()
                     .flat_map(|mat_row| {
-                        mat_row.tucked_cards
+                        mat_row.get_tucked_cards()
                             .iter()
                             .filter(|tc| **tc >= 1)
                     })
@@ -209,8 +209,8 @@ impl BonusCard {
                 player.mat.rows().iter()
                     .map(
                         |row|
-                        row.eggs.iter().zip(row.eggs_cap).filter(|(eggs, eggs_cap)| {
-                            *eggs == eggs_cap && *eggs_cap > 0
+                        row.get_eggs().iter().zip(row.get_eggs_cap()).filter(|(eggs, eggs_cap)| {
+                            eggs == eggs_cap && **eggs_cap > 0
                         }).count()
                     )
                     .sum()

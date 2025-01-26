@@ -5,19 +5,21 @@ type BirdResourceRow = [u8; 5];
 
 #[derive(Debug, Clone)]
 pub struct MatRow {
-    pub birds: Vec<BirdCard>,
-    pub tucked_cards: BirdResourceRow,
-    pub cached_food: Vec<BirdResourceRow>,
-    pub eggs: BirdResourceRow,
-    pub eggs_cap: BirdResourceRow,
+    bird_row_idxs: Vec<usize>,
+    birds: Vec<BirdCard>,
+    tucked_cards: BirdResourceRow,
+    cached_food: Vec<BirdResourceRow>,
+    eggs: BirdResourceRow,
+    eggs_cap: BirdResourceRow,
 }
 
 impl Default for MatRow {
     fn default() -> Self {
         Self {
             birds: Vec::with_capacity(5),
+            bird_row_idxs: Vec::with_capacity(5),
             tucked_cards: [0, 0, 0, 0, 0],
-            cached_food: vec![],
+            cached_food: Vec::with_capacity(5),
             eggs: [0, 0, 0, 0, 0],
             eggs_cap: [0, 0, 0, 0, 0],
         }
@@ -26,10 +28,11 @@ impl Default for MatRow {
 
 impl MatRow {
     pub fn col_to_play(&self) -> Option<u8> {
-        if self.birds.len() == 5 {
+        let col = self.bird_row_idxs.last().map(|x| x + 1).unwrap_or(0) ;
+        if col == 5 {
             return None;
         } else {
-            return Some(self.birds.len() as u8)
+            return Some(col as u8)
         }
     }
 
@@ -97,6 +100,46 @@ impl MatRow {
 
     pub fn get_birds(&self) -> &Vec<BirdCard> {
         &self.birds
+    }
+
+    pub fn get_eggs(&self) -> &BirdResourceRow {
+        &self.eggs
+    }
+
+    pub fn get_eggs_cap(&self) -> &BirdResourceRow {
+        &self.eggs_cap
+    }
+
+    pub fn get_cached_food(&self) -> &Vec<BirdResourceRow> {
+        &self.cached_food
+    }
+
+    pub fn get_tucked_cards(&self) -> &BirdResourceRow {
+        &self.tucked_cards
+    }
+
+    pub fn play_a_bird(&mut self, bird_card: BirdCard) -> WingResult<()>{
+        let col = self.col_to_play().ok_or(WingError::InvalidAction)? as usize;
+        self.birds.push(bird_card);
+        self.bird_row_idxs.push(col);
+        self.eggs_cap[col] = bird_card.egg_capacity();
+
+        match bird_card {
+            BirdCard::CommonBlackbird
+                | BirdCard::EuropeanRoller
+                | BirdCard::GreyHeron
+                | BirdCard::LongTailedTit => {
+                    // They are played side-ways. Unless it is the last column
+                    if self.bird_row_idxs.len() < 5 {
+                        self.bird_row_idxs.push(col + 1)
+                    }
+                }
+            _ => {}
+
+        }
+
+
+        Ok(())
     }
 }
 
@@ -183,11 +226,11 @@ impl PlayerMat {
             2
         } else {
             1
-        } + hab_row.birds.len() / 2;
+        } + hab_row.get_birds().len() / 2;
 
         result.extend((0..num_actions).map(|_| hab_action.clone()));
 
-        if hab_row.birds.len() % 2 == 1 {
+        if hab_row.get_birds().len() % 2 == 1 {
             result.push(habitat.optional_action())
         }
 
@@ -248,17 +291,19 @@ impl PlayerMat {
         self.num_eggs > 0
     }
 
-    pub fn put_bird_card(&mut self, bird_card: BirdCard, habitat: &Habitat) -> WingResult<()> {
+    pub fn put_bird_card(&mut self, bird_card: BirdCard, habitat: &Habitat) -> WingResult<Vec<Action>> {
         let row = self.get_row_mut(habitat);
-        if row.birds.len() >= 5 {
-            Err(WingError::InvalidAction)
-        } else {
-            let egg_cap = bird_card.egg_capacity();
-            row.eggs_cap[row.birds.len()] += egg_cap;
-            row.birds.push(bird_card);
-            self.eggs_cap += egg_cap;
-            Ok(())
+        if row.get_birds().len() >= 5 {
+            return Err(WingError::InvalidAction)
         }
+
+        let egg_cost = (row.col_to_play().unwrap() + 1) / 2;
+
+        let egg_cap = bird_card.egg_capacity();
+        row.play_a_bird(bird_card)?;
+        self.eggs_cap += egg_cap;
+
+        Ok((0..egg_cost as usize).map(|_| Action::DiscardEgg).collect())
     }
 
     pub fn rows(&self) -> [&MatRow; 3] {

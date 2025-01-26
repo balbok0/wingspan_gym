@@ -98,11 +98,12 @@ impl Player {
 
         let (bird_card, hab, orig_card_idx) = self._playable_card_hab_combos[bird_card_idx];
 
-        let result = self.pay_bird_cost(&bird_card)?;
-        self.mat.put_bird_card(bird_card, &hab)?;
+        let mut food_actions = self.pay_bird_cost(&bird_card)?;
+        let mut egg_actions = self.mat.put_bird_card(bird_card, &hab)?;
         self.bird_cards.remove(orig_card_idx);
 
-        Ok(result)
+        food_actions.append(&mut egg_actions);
+        Ok(food_actions)
     }
 
     fn pay_bird_cost(&mut self, bird_card: &BirdCard) -> WingResult<Vec<Action>> {
@@ -167,7 +168,7 @@ impl Player {
         let bird_points: u8 = self.mat
             .rows()
             .iter()
-            .map(|mat_row| mat_row.birds.iter().map(|b| b.points()).sum::<u8>())
+            .map(|mat_row| mat_row.get_birds().iter().map(|b| b.points()).sum::<u8>())
             .sum();
 
         // Get points from eggs
@@ -177,14 +178,14 @@ impl Player {
         let tucked_cards: u8 = self.mat
             .rows()
             .iter()
-            .map(|mat_row| mat_row.tucked_cards.iter().sum::<u8>())
+            .map(|mat_row| mat_row.get_tucked_cards().iter().sum::<u8>())
             .sum();
 
         // Points from cached cards
         let cached_food: u8 = self.mat
             .rows()
             .iter()
-            .map(|mat_row| mat_row.cached_food.iter().flatten().sum::<u8>())
+            .map(|mat_row| mat_row.get_cached_food().iter().flatten().sum::<u8>())
             .sum();
 
         self.end_of_round_points + bird_points + egg_points + tucked_cards + cached_food
@@ -200,9 +201,9 @@ impl Player {
 
     pub fn birds_on_mat(&self) -> [Vec<u16>; 3] {
         [
-            self.mat.get_row(&Habitat::Forest).birds.iter().map(BirdCard::index).collect(),
-            self.mat.get_row(&Habitat::Grassland).birds.iter().map(BirdCard::index).collect(),
-            self.mat.get_row(&Habitat::Wetland).birds.iter().map(BirdCard::index).collect(),
+            self.mat.get_row(&Habitat::Forest).get_birds().iter().map(BirdCard::index).collect(),
+            self.mat.get_row(&Habitat::Grassland).get_birds().iter().map(BirdCard::index).collect(),
+            self.mat.get_row(&Habitat::Wetland).get_birds().iter().map(BirdCard::index).collect(),
         ]
     }
 }
