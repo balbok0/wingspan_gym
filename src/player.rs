@@ -184,7 +184,7 @@ impl Player {
         let cached_food: u8 = self.mat
             .rows()
             .iter()
-            .map(|mat_row| mat_row.cached_food.iter().sum::<u8>())
+            .map(|mat_row| mat_row.cached_food.iter().flatten().sum::<u8>())
             .sum();
 
         self.end_of_round_points + bird_points + egg_points + tucked_cards + cached_food

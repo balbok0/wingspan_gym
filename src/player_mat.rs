@@ -7,7 +7,7 @@ type BirdResourceRow = [u8; 5];
 pub struct MatRow {
     pub birds: Vec<BirdCard>,
     pub tucked_cards: BirdResourceRow,
-    pub cached_food: BirdResourceRow,
+    pub cached_food: Vec<BirdResourceRow>,
     pub eggs: BirdResourceRow,
     pub eggs_cap: BirdResourceRow,
 }
@@ -17,7 +17,7 @@ impl Default for MatRow {
         Self {
             birds: Vec::with_capacity(5),
             tucked_cards: [0, 0, 0, 0, 0],
-            cached_food: [0, 0, 0, 0, 0],
+            cached_food: vec![],
             eggs: [0, 0, 0, 0, 0],
             eggs_cap: [0, 0, 0, 0, 0],
         }
@@ -93,6 +93,10 @@ impl MatRow {
 
         // Requested spot not found, so return number of valid spots in this row
         Err(count)
+    }
+
+    pub fn get_birds(&self) -> &Vec<BirdCard> {
+        &self.birds
     }
 }
 

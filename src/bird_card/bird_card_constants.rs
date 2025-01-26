@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub enum BirdCardColor {
     White,
     Brown,
@@ -5,4 +6,18 @@ pub enum BirdCardColor {
     None,
     Teal,
     Yellow,
+}
+
+impl BirdCardColor {
+    pub fn unique_id(&self) -> usize {
+        match self {
+            BirdCardColor::Brown => 0,
+            BirdCardColor::Pink => 1,
+            BirdCardColor::Teal => 2,
+            BirdCardColor::Yellow => 3,
+            // From description: "Birds with no power count as white."
+            // For Ethologist & Behaviorist
+            BirdCardColor::White | BirdCardColor::None => 4,
+        }
+    }
 }
