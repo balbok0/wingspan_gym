@@ -46,24 +46,22 @@ impl BonusCard {
             },
             BonusCard::Behaviorist => {
                 // For each column that contains birds with 3 different power colors:
-                let bird_cards = player.get_mat().rows().map(|r| r.get_birds());
 
-                let num_columns = bird_cards.iter().map(|row| row.len()).min().unwrap();
-
-                let mut result = 0;
-                for col_idx in 0..num_columns {
-                    let unique_color_count = bird_cards
-                        .into_iter()
-                        .map(|birds| birds[col_idx].color())
-                        .unique_by(|b| b.unique_id())
-                        .count();
-
-                    if unique_color_count == 3 {
-                        result += 1;
-                    }
-                }
-
-                result
+                // None (no-color) counts as White
+                player
+                    .get_mat()
+                    .get_columns()
+                    .iter()
+                    .filter(
+                        |col|
+                        // Get number of unique colors per-column, make sure it is 3
+                        col
+                            .iter()
+                            .map(|b| b.color())
+                            .unique_by(|col| col.unique_id())
+                            .count() == 3
+                    )
+                    .count()
             },
             BonusCard::CitizenScientist => {
                 // Birds with tucked cards
@@ -202,7 +200,14 @@ impl BonusCard {
             },
             BonusCard::SiteSelectionExpert => {
                 // Columns with a matching pair or trio of nests
-                todo!()
+                todo!("This bonus card is not supported yet. This is because there are two conditions, with 2 different counts on it.")
+                // player
+                //     .get_mat()
+                //     .get_columns()
+                //     .iter()
+                //     .map(
+                //         |bc_col| bc_col
+                //     )
             },
             BonusCard::AvianTheriogenologist => {
                 // Birds with completely full nests
@@ -330,11 +335,83 @@ impl BonusCard {
             },
             _ => {
                 // All of the bonus cards that have a column in birds sheet
-                player.get_bird_cards()
+                player
+                    .get_mat()
+                    .rows()
                     .iter()
+                    .map(|mr| mr.get_birds())
+                    .flatten()
                     .filter(|bc| bc.bonus_card_membership().contains(&self))
                     .count()
             }
         }
     }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use crate::{bird_card::BirdCard, player_mat::{MatRow, PlayerMat}};
+
+    use super::*;
+
+    fn make_player_from_cards_on_table(forest_cards: Vec<BirdCard>, grassland_cards: Vec<BirdCard>, wetland_cards: Vec<BirdCard>) -> Player {
+        let [forest, grassland, wetland] = [forest_cards, grassland_cards, wetland_cards].map(|cards| {
+            MatRow::new_test(
+                vec![],
+                0,
+                cards,
+                Default::default(),
+                Default::default(),
+                Default::default(),
+                Default::default(),
+            )
+        });
+        let mat = PlayerMat::new_test(forest, grassland, wetland, 0, 0);
+
+        let player = Player::new_test(
+            Default::default(),
+            Default::default(),
+            Default::default(),
+            mat,
+            Default::default(),
+            Default::default(),
+        );
+
+        player
+    }
+
+
+    macro_rules! regular_cards_tests {
+        ($(($name:ident: $bonus:expr, $forest:expr, $grassland:expr, $wetland:expr, $expected:expr),)*) => {
+        $(
+            #[test]
+            fn $name() {
+                let player = make_player_from_cards_on_table($forest, $grassland, $wetland);
+
+                let actual = $bonus.get_count_of_matching(&player);
+                assert_eq!($expected, actual);
+            }
+        )*
+        }
+    }
+
+    regular_cards_tests!(
+        (empty: BonusCard::Anatomist, vec![], vec![], vec![], 0),
+        (anatomist: BonusCard::Anatomist, vec![BirdCard::AshThroatedFlycatcher], vec![BirdCard::BarrowsGoldeneye], vec![], 2),
+        (
+            historian: BonusCard::Historian,
+            vec![BirdCard::AshThroatedFlycatcher, BirdCard::AnnasHummingbird, BirdCard::BairdsSparrow],
+            vec![],
+            vec![BirdCard::BarrowsGoldeneye],
+            3
+        ),
+
+    );
+    // #[test]
+    // fn test_get_count_of_matching_reg_bonus_card() {
+    //     make_player_from_cards_on_table(forest_cards, grassland_cards, wetland_cards)
+
+    //     BonusCard::Anatomist.get_count_of_matching(player)
+    // }
 }

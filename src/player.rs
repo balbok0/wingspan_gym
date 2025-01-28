@@ -1,4 +1,4 @@
-use crate::{action::Action, bird_card::{is_enough_food_to_play_a_card, BirdCard}, error::{WingError, WingResult}, food::Foods, habitat::Habitat, player_mat::PlayerMat};
+use crate::{action::Action, bird_card::{is_enough_food_to_play_a_card, BirdCard}, bonus_card::BonusCard, error::{WingError, WingResult}, food::Foods, habitat::Habitat, player_mat::PlayerMat};
 use pyo3::prelude::*;
 
 
@@ -8,6 +8,8 @@ pub struct Player {
     #[pyo3(get)]
     foods: Foods,
     bird_cards: Vec<BirdCard>,
+    bonus_cards: Vec<BonusCard>,
+
     #[pyo3(get)]
     pub(crate)  turns_left: u8,
 
@@ -24,6 +26,7 @@ impl Default for Player {
         Self {
             foods: [1, 1, 1, 1, 1],
             bird_cards: vec![],
+            bonus_cards: vec![],
             turns_left: 8,
             mat: Default::default(),
             end_of_round_points: 0,
@@ -50,6 +53,15 @@ impl Player {
         }
 
         self.bird_cards.remove(index);
+        Ok(())
+    }
+
+    pub fn discard_bonus_card(&mut self, index: usize) -> WingResult<()> {
+        if index >= self.bonus_cards.len() {
+            return Err(WingError::InvalidAction);
+        }
+
+        self.bonus_cards.remove(index);
         Ok(())
     }
 
@@ -234,5 +246,28 @@ impl Player {
             self.mat.get_row(&Habitat::Grassland).get_birds().iter().map(BirdCard::index).collect(),
             self.mat.get_row(&Habitat::Wetland).get_birds().iter().map(BirdCard::index).collect(),
         ]
+    }
+}
+
+#[cfg(test)]
+impl Player {
+    pub fn new_test(
+        foods: Foods,
+        bird_cards: Vec<BirdCard>,
+        bonus_cards: Vec<BirdCard>,
+        turns_left: u8,
+        mat: PlayerMat,
+        end_of_round_points: u8,
+        _playable_card_hab_combos: Vec<(BirdCard, Habitat, usize)>
+    ) -> Self {
+        Self {
+            foods,
+            bird_cards,
+            bonus_cards,
+            turns_left,
+            mat,
+            end_of_round_points,
+            _playable_card_hab_combos,
+        }
     }
 }

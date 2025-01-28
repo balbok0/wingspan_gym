@@ -5,7 +5,9 @@ type BirdResourceRow = [u8; 5];
 
 #[derive(Debug, Clone)]
 pub struct MatRow {
-    bird_row_idxs: Vec<usize>,
+    // Mapping from column idx -> index in birds. This is because some birds can cover multiple places
+    bird_col_idxs: Vec<usize>,
+    next_col_to_play: usize,
     birds: Vec<BirdCard>,
     tucked_cards: BirdResourceRow,
     cached_food: Vec<BirdResourceRow>,
@@ -17,7 +19,8 @@ impl Default for MatRow {
     fn default() -> Self {
         Self {
             birds: Vec::with_capacity(5),
-            bird_row_idxs: Vec::with_capacity(5),
+            bird_col_idxs: Vec::with_capacity(5),
+            next_col_to_play: 0,
             tucked_cards: [0, 0, 0, 0, 0],
             cached_food: Vec::with_capacity(5),
             eggs: [0, 0, 0, 0, 0],
@@ -28,13 +31,17 @@ impl Default for MatRow {
 
 impl MatRow {
     pub fn col_to_play(&self) -> Option<u8> {
-        let col = self.bird_row_idxs.last().map(|x| x + 1).unwrap_or(0) ;
-        if col == 5 {
+        if self.next_col_to_play >= 5 {
             return None;
         } else {
-            return Some(col as u8)
+            return Some(self.next_col_to_play as u8)
         }
     }
+
+    pub fn bird_at_idx(&self, idx: usize) -> Option<BirdCard> {
+        Some(*self.birds.get(*self.bird_col_idxs.get(idx)?)?)
+    }
+
 
     pub fn get_bird_actions(&self) -> Vec<Action> {
         // TODO: Implement bird actions and then populate this stuff
@@ -119,10 +126,15 @@ impl MatRow {
     }
 
     pub fn play_a_bird(&mut self, bird_card: BirdCard) -> WingResult<()>{
-        let col = self.col_to_play().ok_or(WingError::InvalidAction)? as usize;
+        // Get indexes to insert at
+        let birds_idx = self.birds.len();
+
+        // Push and insert values
         self.birds.push(bird_card);
-        self.bird_row_idxs.push(col);
-        self.eggs_cap[col] = bird_card.egg_capacity();
+        self.bird_col_idxs.push(birds_idx);
+        self.eggs_cap[self.next_col_to_play] = bird_card.egg_capacity();
+        // Update which column to play at
+        self.next_col_to_play += 1;
 
         match bird_card {
             BirdCard::CommonBlackbird
@@ -130,8 +142,9 @@ impl MatRow {
                 | BirdCard::GreyHeron
                 | BirdCard::LongTailedTit => {
                     // They are played side-ways. Unless it is the last column
-                    if self.bird_row_idxs.len() < 5 {
-                        self.bird_row_idxs.push(col + 1)
+                    if self.bird_col_idxs.len() < 5 {
+                        self.bird_col_idxs.push(birds_idx);
+                        self.next_col_to_play += 1;
                     }
                 }
             _ => {}
@@ -140,6 +153,29 @@ impl MatRow {
 
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+impl MatRow {
+    pub fn new_test(
+        bird_col_idxs: Vec<usize>,
+        next_col_to_play: usize,
+        birds: Vec<BirdCard>,
+        tucked_cards: BirdResourceRow,
+        cached_food: Vec<BirdResourceRow>,
+        eggs: BirdResourceRow,
+        eggs_cap: BirdResourceRow,
+    ) -> Self {
+        Self {
+            bird_col_idxs,
+            next_col_to_play,
+            birds,
+            tucked_cards,
+            cached_food,
+            eggs,
+            eggs_cap,
+        }
     }
 }
 
@@ -191,6 +227,18 @@ impl PlayerMat {
                 &mut self.wetland
             },
         }
+    }
+
+    pub fn get_columns(&self) -> Vec<[BirdCard; 3]> {
+        let bird_cards = self.rows().map(|mt| mt.get_birds());
+
+        let num_columns = bird_cards.iter().map(|row| row.len()).min().unwrap();
+
+        (0..num_columns)
+            .map(|col_idx| {
+                [bird_cards[0][col_idx], bird_cards[1][col_idx], bird_cards[2][col_idx]]
+            })
+            .collect()
     }
 
     pub fn playable_habitats(&self, card: &BirdCard) -> Vec<Habitat> {
@@ -312,5 +360,24 @@ impl PlayerMat {
 
     pub fn egg_count(&self) -> u8 {
         self.num_eggs
+    }
+}
+
+#[cfg(test)]
+impl PlayerMat {
+    pub fn new_test(
+        forest: MatRow,
+        grassland: MatRow,
+        wetland: MatRow,
+        num_eggs: u8,
+        eggs_cap: u8,
+    ) -> Self {
+        Self {
+            forest,
+            grassland,
+            wetland,
+            num_eggs,
+            eggs_cap,
+        }
     }
 }
