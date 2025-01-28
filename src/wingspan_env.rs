@@ -3,7 +3,18 @@ use rand::{rngs::StdRng, seq::SliceRandom, SeedableRng};
 
 use pyo3::{exceptions::PyValueError, prelude::*};
 
-use crate::{action::{Action, PyAction}, bird_card::get_deck, bird_feeder::BirdFeeder, deck_and_holder::DeckAndHolder, error::{WingError, WingResult}, expansion::Expansion, habitat::Habitat, player::Player, step_result::StepResult};
+use crate::{
+    action::{Action, PyAction},
+    bird_card::get_deck as get_birds_deck,
+    bird_feeder::BirdFeeder,
+    bonus_card::{get_deck as get_bonus_deck, BonusCard},
+    deck_and_holder::DeckAndHolder,
+    error::{WingError, WingResult},
+    expansion::Expansion,
+    habitat::Habitat,
+    player::Player,
+    step_result::StepResult
+};
 
 #[derive(Debug, Builder, Clone)]
 pub struct WingspanEnvConfig {
@@ -23,6 +34,7 @@ pub struct WingspanEnv {
     _round_idx: i8,
     _player_idx: usize,
     pub(crate) _bird_deck: DeckAndHolder,
+    _bonus_deck: Vec<BonusCard>,
     _players: Vec<Player>,
     pub(crate) _bird_feeder: BirdFeeder,
     pub(crate) _action_queue: Vec<Action>,
@@ -37,6 +49,7 @@ impl WingspanEnv {
             _round_idx: -1,
             _player_idx: 0,
             _bird_deck: Default::default(),
+            _bonus_deck: Default::default(),
             _bird_feeder: Default::default(),
             _players: Vec::with_capacity(num_players as usize),
             _action_queue: Vec::with_capacity(50), // 50 seems like a reasonable upper bound even for most intense chains?
@@ -56,17 +69,19 @@ impl WingspanEnv {
         }
 
         // Create new deck
-        let mut deck = get_deck(&self.config.expansions);
+        let mut deck = get_birds_deck(&self.config.expansions);
         deck.shuffle(&mut self.rng);
         self._bird_deck = DeckAndHolder::new(deck);
+        self._bonus_deck = get_bonus_deck(&self.config.expansions);
 
         // TODO: Bonus cards for players
 
         // Give each player foods
 
         for _ in 0..self.config.num_players {
-            let player_cards = self._bird_deck.draw_cards_from_deck(5);
-            self._players.push(Player::new(player_cards));
+            let player_bird_cards = self._bird_deck.draw_cards_from_deck(5);
+            let player_bonus_cards = self._bonus_deck.split_off(self._bonus_deck.len() - 2);
+            self._players.push(Player::new(player_bird_cards, player_bonus_cards));
         }
 
         self._action_queue.clear();
@@ -74,6 +89,7 @@ impl WingspanEnv {
             // Five times make current user decide on what to do
             self._action_queue.push(Action::DiscardFoodOrBirdCard);
         }
+        self._action_queue.push(Action::DiscardBirdCard);
 
         // TODO: 3 birds face-up
     }

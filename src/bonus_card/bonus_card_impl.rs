@@ -2,6 +2,7 @@
 use strum_macros::EnumIter;
 
 use super::ScoringRule;
+use crate::expansion::Expansion;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, EnumIter)]
 pub enum BonusCard {
@@ -156,6 +157,58 @@ impl BonusCard {
       Self::WetlandPopulationMonitor => "Wetland Population Monitor",
       Self::WetlandRanger => "Wetland Ranger",
       Self::WinterFeeder => "Winter Feeder",
+    }
+  }
+
+  pub fn expansion(&self) -> Expansion {
+    match self {
+      Self::Anatomist => Expansion::Core,
+      Self::BackyardBirder => Expansion::Core,
+      Self::BirdCounter => Expansion::Core,
+      Self::BirdFeeder => Expansion::Core,
+      Self::BreedingManager => Expansion::Core,
+      Self::Cartographer => Expansion::Core,
+      Self::Ecologist => Expansion::Core,
+      Self::EnclosureBuilder => Expansion::Core,
+      Self::Falconer => Expansion::Core,
+      Self::FisheryManager => Expansion::Core,
+      Self::FoodWebExpert => Expansion::Core,
+      Self::Forester => Expansion::Core,
+      Self::Historian => Expansion::Core,
+      Self::LargeBirdSpecialist => Expansion::Core,
+      Self::NestBoxBuilder => Expansion::Core,
+      Self::OmnivoreSpecialist => Expansion::Core,
+      Self::Oologist => Expansion::Core,
+      Self::PasserineSpecialist => Expansion::Core,
+      Self::Photographer => Expansion::Core,
+      Self::PlatformBuilder => Expansion::Core,
+      Self::PrairieManager => Expansion::Core,
+      Self::Rodentologist => Expansion::Core,
+      Self::VisionaryLeader => Expansion::Core,
+      Self::Viticulturalist => Expansion::Core,
+      Self::WetlandScientist => Expansion::Core,
+      Self::WildlifeGardener => Expansion::Core,
+      Self::Behaviorist => Expansion::European,
+      Self::BirdBander => Expansion::European,
+      Self::CitizenScientist => Expansion::European,
+      Self::DietSpecialist => Expansion::European,
+      Self::Ethologist => Expansion::European,
+      Self::ForestDataAnalyst => Expansion::Oceania,
+      Self::GrasslandDataAnalyst => Expansion::Oceania,
+      Self::MechanicalEngineer => Expansion::Oceania,
+      Self::SiteSelectionExpert => Expansion::Oceania,
+      Self::WetlandDataAnalyst => Expansion::Oceania,
+      Self::AvianTheriogenologist => Expansion::Asia,
+      Self::EndangeredSpeciesProtector => Expansion::Asia,
+      Self::ForestPopulationMonitor => Expansion::Asia,
+      Self::ForestRanger => Expansion::Asia,
+      Self::GrasslandPopulationMonitor => Expansion::Asia,
+      Self::GrasslandRanger => Expansion::Asia,
+      Self::PelletDissector => Expansion::Asia,
+      Self::SmallClutchSpecialist => Expansion::Asia,
+      Self::WetlandPopulationMonitor => Expansion::Asia,
+      Self::WetlandRanger => Expansion::Asia,
+      Self::WinterFeeder => Expansion::Asia,
     }
   }
 

@@ -15,15 +15,14 @@ pub enum Action {
     GetEgg,
     GetBirdCard,
 
-    // Discard Food Or Bird Card
+    // Discard actions,
     DiscardFoodOrBirdCard,
-    // Discard Bird Card
     DiscardBirdCard,
-    // Discard Food
+    DiscardBonusCard,
     DiscardFood,
     DiscardFoodChoice(Box<[(usize, u8)]>), // Discard food of choice N times
-    // Discard Egg
     DiscardEgg,
+
 
     // Do something (typically discard to perform an action)
     DoThen(Box<Action>, Box<Action>),
@@ -90,6 +89,9 @@ impl Action {
             Action::DiscardBirdCard => {
                 env.current_player_mut().discard_bird_card(action_idx as usize)
             },
+            Action::DiscardBonusCard => {
+                env.current_player_mut().discard_bonus_card(action_idx as usize)
+            },
             Action::DiscardFood => {
                 env.current_player_mut().discard_food(action_idx as usize, 1)
             },
@@ -131,6 +133,7 @@ impl Action {
             Action::GetBirdCard => env.current_player().get_bird_cards().len() < env.config().hand_limit.into(),
             Action::DiscardFoodOrBirdCard => Action::DiscardFood.is_performable(env) || Action::DiscardBirdCard.is_performable(env),
             Action::DiscardBirdCard => env.current_player().can_discard_bird_card(),
+            Action::DiscardBonusCard => env.current_player().get_bonus_cards().len() > 0,
             Action::DiscardFood => env.current_player().can_discard_food(),
             Action::DiscardFoodChoice(choices) => {
                 let foods = env.current_player().get_foods();
@@ -161,6 +164,7 @@ impl Action {
             Action::DiscardBirdCard => {
                 env.current_player().get_bird_cards().len()
             }
+            Action::DiscardBonusCard => env.current_player().get_bonus_cards().len(),
             Action::DiscardFood => 5,
             Action::DiscardFoodChoice(choices) => choices.len(),
             Action::DiscardEgg => env.current_player().get_mat().num_spots_to_discard_eggs(),
@@ -219,6 +223,7 @@ impl Action {
                 | Action::GetEgg
                 | Action::GetBirdCard
                 | Action::DiscardBirdCard
+                | Action::DiscardBonusCard
                 | Action::DiscardEgg
                 => {
                 (0..self.action_space_size(env) as u8).into_iter().collect()

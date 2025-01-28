@@ -36,9 +36,10 @@ impl Default for Player {
 }
 
 impl Player {
-    pub fn new(bird_cards: Vec<BirdCard>) -> Self {
+    pub fn new(bird_cards: Vec<BirdCard>, bonus_cards: Vec<BonusCard>) -> Self {
         Self {
             bird_cards,
+            bonus_cards,
             ..Default::default()
         }
     }
@@ -200,7 +201,26 @@ impl Player {
             .map(|mat_row| mat_row.get_cached_food().iter().flatten().sum::<u8>())
             .sum();
 
-        self.end_of_round_points + bird_points + egg_points + tucked_cards + cached_food
+        let bonus_points: u8 = self.bonus_cards
+            .iter()
+            .map(|bc| {
+                let count = bc.get_count_of_matching(&self) as u8;
+                match bc.scoring_rule() {
+                    crate::bonus_card::ScoringRule::Each(points_per_each) => points_per_each * count,
+                    crate::bonus_card::ScoringRule::Ladder(steps) => {
+                        let mut points = 0;
+                        let mut idx = 0;
+                        while idx < steps.len() && count >= steps[idx].0 {
+                            idx += 1;
+                            points = steps[idx].1;
+                        }
+                        points
+                    }
+                }
+            })
+            .sum();
+
+        self.end_of_round_points + bird_points + bonus_points + egg_points + tucked_cards + cached_food
     }
 
     pub fn add_bird_card(&mut self, bird_card: BirdCard) {
@@ -211,9 +231,12 @@ impl Player {
         self.foods[food_idx] += food_count;
     }
 
-
     pub fn get_bird_cards(&self) -> &Vec<BirdCard> {
         &self.bird_cards
+    }
+
+    pub fn get_bonus_cards(&self) -> &Vec<BonusCard> {
+        &self.bonus_cards
     }
 
     pub fn get_foods(&self) -> &Foods {
