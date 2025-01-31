@@ -16,6 +16,7 @@ def main():
             "// This code is generated automatically via a script in code_gen/ folder\n",
             "use strum_macros::EnumIter;\n\n",
             "use super::ScoringRule;\n",
+            "use crate::expansion::Expansion;\n"
             # "use crate::{{expansion::Expansion, food::{{BirdCardCost, CostAlternative}}, nest::NestType}};\n",
         ])
 
@@ -61,6 +62,24 @@ def main():
             for row in bonuses.iter_rows(named=True)
         ])
         f.writelines([
+            "    }\n",
+            "  }\n"
+        ])
+
+        # Expansions
+        f.writelines([
+            "\n",
+            "  pub fn expansion(&self) -> Expansion {\n",
+            "    match self {\n",
+        ])
+        expansion_lines = []
+        for row in bonuses.iter_rows(named=True):
+            exp_val = f"Expansion::{row['expansion'].capitalize()}"
+            expansion_lines.append(
+                f"      Self::{row['enum_name']} => {exp_val},\n"
+            )
+        f.writelines([
+            *expansion_lines,
             "    }\n",
             "  }\n"
         ])

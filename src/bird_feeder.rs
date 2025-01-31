@@ -1,6 +1,6 @@
 use rand::{rngs::StdRng, Rng};
 
-use crate::{action::Action, error::{WingError, WingResult}};
+use crate::{action::Action, error::{WingError, WingResult}, food::FoodIndex};
 
 fn sample_dice(rng: &mut StdRng, num_times: usize) -> Vec<u8> {
     (0..num_times).map(|_| rng.gen_range(0..6u8)).collect()
@@ -20,7 +20,7 @@ impl Default for BirdFeeder {
 
 #[derive(Debug, Clone)]
 pub(crate) enum BirdFeederActionResult {
-    GainFood(usize),
+    GainFood(FoodIndex),
     FollowupAction(Action),
 }
 
@@ -55,12 +55,45 @@ impl BirdFeeder {
 
         // Update state of env
         let result = match dice_face {
-            0 | 1 | 2 | 3 | 4 => BirdFeederActionResult::GainFood(dice_face as usize),
-            5 => BirdFeederActionResult::FollowupAction(Action::GetFoodChoice(Box::new([0, 1]))),
+            0 | 1 | 2 | 3 | 4 => BirdFeederActionResult::GainFood(FoodIndex::from(dice_face)),
+            5 => BirdFeederActionResult::FollowupAction(Action::GetFoodChoice(Box::new([FoodIndex::Seed, FoodIndex::Invertebrate]))),
             _ => panic!("Incorrect dice face: {}", dice_face),
         };
 
         Ok(result)
+    }
+
+    pub fn count(&self, food_idx: FoodIndex) -> usize {
+        let allowed_dice = match food_idx {
+            FoodIndex::Fish | FoodIndex::Fruit | FoodIndex::Rodent => vec![food_idx as u8],
+            FoodIndex::Invertebrate | FoodIndex::Seed => vec![food_idx as u8, 5],
+        };
+
+        self.dice_in_birdfeeder.iter()
+            .filter(|d| allowed_dice.contains(*d))
+            .count()
+    }
+
+    pub fn take_specific_food(&mut self, food_idx: FoodIndex) -> WingResult<()> {
+        let allowed_dice = match food_idx {
+            FoodIndex::Fish | FoodIndex::Fruit | FoodIndex::Rodent => vec![food_idx as u8],
+            FoodIndex::Invertebrate | FoodIndex::Seed => vec![food_idx as u8, 5],
+        };
+
+        let dice_to_remove = self.dice_in_birdfeeder.iter().enumerate()
+            .filter_map(|(idx, d)|
+                if allowed_dice.contains(d) {
+                    Some(idx)
+                } else {
+                    None
+                }
+            )
+            .next();
+
+        let dice_to_remove = dice_to_remove.ok_or(WingError::InvalidAction)?;
+
+        self.dice_in_birdfeeder.remove(dice_to_remove);
+        Ok(())
     }
 
     pub fn num_dice_in(&self) -> usize {

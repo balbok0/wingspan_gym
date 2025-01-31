@@ -57,7 +57,7 @@ impl BonusCard {
                         // Get number of unique colors per-column, make sure it is 3
                         col
                             .iter()
-                            .map(|b| b.color())
+                            .filter_map(|b| b.map(|b| b.color()))
                             .unique_by(|col| col.unique_id())
                             .count() == 3
                     )

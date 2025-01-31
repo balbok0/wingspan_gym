@@ -37,7 +37,7 @@ pub struct WingspanEnv {
     _bonus_deck: Vec<BonusCard>,
     _players: Vec<Player>,
     pub(crate) _bird_feeder: BirdFeeder,
-    pub(crate) _action_queue: Vec<Action>,
+    _action_queue: Vec<Action>,
 }
 
 impl WingspanEnv {
@@ -87,9 +87,9 @@ impl WingspanEnv {
         self._action_queue.clear();
         for _ in 0..5 {
             // Five times make current user decide on what to do
-            self._action_queue.push(Action::DiscardFoodOrBirdCard);
+            self.push_action(Action::DiscardFoodOrBirdCard);
         }
-        self._action_queue.push(Action::DiscardBirdCard);
+        self.push_action(Action::DiscardBirdCard);
 
         // TODO: 3 birds face-up
     }
@@ -131,7 +131,7 @@ impl WingspanEnv {
         }
         let action = self._action_queue.pop().unwrap();
         if let Err(e) = action.perform_action(action_idx, self) {
-            self._action_queue.push(action);
+            self.push_action(action);
             return Err(e);
         };
 
@@ -172,14 +172,14 @@ impl WingspanEnv {
                     for player in self._players.iter_mut() {
                         player.set_turns_left(8);
                     }
-                    self._action_queue.push(Action::ChooseAction);
+                    self.push_action(Action::ChooseAction);
                     // Reduce number of turns left, since a new player will be making a move
                     self.current_player_mut().turns_left -= 1;
                 } else {
                     // Next player can do setup
                     for _ in 0..5 {
                         // Five times make current user decide on what to do
-                        self._action_queue.push(Action::DiscardFoodOrBirdCard);
+                        self.push_action(Action::DiscardFoodOrBirdCard);
                     }
                 }
             } else {
@@ -197,7 +197,7 @@ impl WingspanEnv {
                     // End of normal turn
                     self.end_of_turn();
                 }
-                self._action_queue.push(Action::ChooseAction);
+                self.push_action(Action::ChooseAction);
 
                 // Reduce number of turns left, since a new player will be making a move
                 self.current_player_mut().turns_left -= 1;
@@ -210,7 +210,17 @@ impl WingspanEnv {
     pub fn populate_action_queue_from_habitat_action(&mut self, habitat: &Habitat) {
         let mut actions = self.current_player_mut().get_mat_mut().get_actions_from_habitat_action(habitat);
 
-        self._action_queue.append(&mut actions);
+        self.append_actions(&mut actions);
+    }
+
+    pub fn draw_bonus_cards(&mut self, num_cards: usize) {
+        let mut player_bonus_cards = self._bonus_deck.split_off(self._bonus_deck.len() - num_cards);
+
+        self.current_player_mut().add_bonus_cards(&mut player_bonus_cards);
+    }
+
+    pub fn get_player(&self, player_idx: usize) -> &Player {
+        &self._players[player_idx % self._players.len()]
     }
 
     pub fn current_player(&self) -> &Player {
@@ -219,6 +229,14 @@ impl WingspanEnv {
 
     pub fn current_player_mut(&mut self) -> &mut Player {
         &mut self._players[self._player_idx]
+    }
+
+    pub fn current_player_idx(&self) -> usize {
+        self._player_idx
+    }
+
+    pub fn set_current_player(&mut self, idx: usize) {
+        self._player_idx = idx;
     }
 
     pub fn action_space_size(&self) -> Option<usize> {
@@ -231,6 +249,14 @@ impl WingspanEnv {
 
     pub fn next_action(&self) -> Option<&Action> {
         self._action_queue.last()
+    }
+
+    pub fn push_action(&mut self, action: Action) {
+        self._action_queue.push(action)
+    }
+
+    pub fn append_actions(&mut self, actions: &mut Vec<Action>) {
+        self._action_queue.append(actions)
     }
 }
 

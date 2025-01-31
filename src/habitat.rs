@@ -7,6 +7,23 @@ pub enum Habitat {
     Wetland,
 }
 
+impl From<usize> for Habitat {
+    fn from(value: usize) -> Self {
+        match value {
+            0 => Habitat::Forest,
+            1 => Habitat::Grassland,
+            2 => Habitat::Wetland,
+            x => panic!("Got habitat idx {x}, but only 0, 1, 2 are allowed.")
+        }
+    }
+}
+
+impl From<u8> for Habitat {
+    fn from(value: u8) -> Self {
+        Habitat::from(value as usize)
+    }
+}
+
 impl Habitat {
     pub fn action(&self) -> Action {
         match self {

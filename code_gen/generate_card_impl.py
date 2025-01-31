@@ -6,6 +6,8 @@ from utils import load_all_cards, FOOD_TYPES, HABITATS, common_name_to_enum_name
 
 bird_impl_file_path = Path(__file__).parent.parent / "src" / "bird_card" / "bird_card_impl.rs"
 
+bird_action_impl_file_path = Path(__file__).parent.parent / "src" / "bird_card" / "bird_card_action_impl.rs"
+
 
 def main():
     birds, bonuses, goals = load_all_cards()
@@ -254,6 +256,50 @@ def main():
         # Close impl block
         f.write("}\n")
 
+
+    # # Return early to not overwrite actual work
+    # if bird_action_impl_file_path.exists():
+    #     return
+
+    power_birds = (
+        birds
+        .with_columns(pl.col("Power text").str.to_lowercase().alias("power_text"))
+        .group_by("power_text")
+        .agg(pl.col("enum_name"))
+    )
+
+    # Setup of manual impl of bird cards
+    with open(bird_action_impl_file_path, mode="w") as f:
+        # Impl block
+        f.writelines([
+            "use super::BirdCard;\n",
+            "use crate::wingspan_env::WingspanEnv;\n",
+            "\nimpl BirdCard {\n",
+        ])
+
+        # Activate function
+        f.writelines([
+            "  pub fn activate(&self, env: &mut WingspanEnv) {\n",
+            "    match self {\n",
+        ])
+
+        activate_lines = []
+        for row in power_birds.iter_rows(named=True):
+            birds_line = "\n        | ".join([f"Self::{em}" for em in row["enum_name"]])
+
+            bird_line = f"      {birds_line} => {{\n"
+            bird_line += f"        // {row['power_text']}\n"
+            bird_line += "        todo!()\n"
+            bird_line += "      },\n"
+            activate_lines.append(bird_line)
+
+        f.writelines([
+            *activate_lines,
+            "    }\n",
+            "  }\n"
+        ])
+        # Close impl block
+        f.write("}\n")
 
 if __name__ == "__main__":
     main()

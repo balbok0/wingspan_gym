@@ -1,4 +1,4 @@
-use crate::{action::Action, bird_card::{is_enough_food_to_play_a_card, BirdCard}, bonus_card::BonusCard, error::{WingError, WingResult}, food::Foods, habitat::Habitat, player_mat::PlayerMat};
+use crate::{action::Action, bird_card::{is_enough_food_to_play_a_card, BirdCard}, bonus_card::BonusCard, error::{WingError, WingResult}, food::{FoodIndex, Foods}, habitat::Habitat, player_mat::PlayerMat};
 use pyo3::prelude::*;
 
 
@@ -66,7 +66,8 @@ impl Player {
         Ok(())
     }
 
-    pub fn discard_food(&mut self, index: usize, num_food: u8) -> WingResult<()> {
+    pub fn discard_food(&mut self, index: FoodIndex, num_food: u8) -> WingResult<()> {
+        let index = index as usize;
         if index >= self.get_foods().len() {
             return Err(WingError::InvalidAction);
         }
@@ -80,7 +81,7 @@ impl Player {
 
     pub fn discard_food_or_bird_card(&mut self, index: usize) -> WingResult<()> {
         if index < 5 {
-            self.discard_food(index, 1)
+            self.discard_food(index.into(), 1)
         } else {
             self.discard_bird_card(index - 5)
         }
@@ -135,7 +136,7 @@ impl Player {
                 for (food_idx, food_cost) in costs.iter().enumerate() {
                     if let Some(food_cost) = food_cost {
                         if self.foods[food_idx] >= *food_cost {
-                            discard_options.push((food_idx as usize, *food_cost));
+                            discard_options.push((food_idx.into(), *food_cost));
                         }
                     }
                 }
@@ -144,7 +145,7 @@ impl Player {
                 if discard_options.len() == 1 {
                     let (food_idx, food_cost) = discard_options.pop().unwrap();
 
-                    self.foods[food_idx] -= food_cost;
+                    self.foods[food_idx as usize] -= food_cost;
                     vec![]
                 } else {
                     vec![Action::DiscardFoodChoice(discard_options.into_boxed_slice())]
@@ -227,12 +228,25 @@ impl Player {
         self.bird_cards.push(bird_card);
     }
 
-    pub fn add_food(&mut self, food_idx: usize, food_count: u8) {
-        self.foods[food_idx] += food_count;
+    pub fn append_bird_cards(&mut self, bird_card: &mut Vec<BirdCard>) {
+        self.bird_cards.append(bird_card);
+    }
+
+    pub fn add_bonus_cards(&mut self, bonus_cards: &mut Vec<BonusCard>) {
+        self.bonus_cards.append(bonus_cards);
+    }
+
+    pub fn add_food(&mut self, food_idx: FoodIndex, food_count: u8) {
+        self.foods[food_idx as usize] += food_count;
     }
 
     pub fn get_bird_cards(&self) -> &Vec<BirdCard> {
         &self.bird_cards
+    }
+
+    pub fn get_birds_on_mat(&self) -> [&Vec<BirdCard>; 3] {
+        self.mat.rows()
+            .map(|mr| mr.get_birds())
     }
 
     pub fn get_bonus_cards(&self) -> &Vec<BonusCard> {
