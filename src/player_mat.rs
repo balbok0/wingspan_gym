@@ -1,4 +1,4 @@
-use crate::{action::Action, bird_card::BirdCard, error::{WingError, WingResult}, food::FoodIndex, habitat::Habitat};
+use crate::{action::Action, bird_card::BirdCard, error::{WingError, WingResult}, food::FoodIndex, habitat::{self, Habitat}, wingspan_env::WingspanEnv};
 
 type BirdResourceRow = [u8; 5];
 
@@ -6,6 +6,7 @@ type BirdResourceRow = [u8; 5];
 #[derive(Debug, Clone)]
 pub struct MatRow {
     // Mapping from column idx -> index in birds. This is because some birds can cover multiple places
+    habitat: Habitat,
     bird_col_idxs: Vec<usize>,
     next_col_to_play: usize,
     birds: Vec<BirdCard>,
@@ -15,9 +16,10 @@ pub struct MatRow {
     eggs_cap: Vec<u8>,
 }
 
-impl Default for MatRow {
-    fn default() -> Self {
+impl MatRow {
+    pub fn new(habitat: Habitat) -> Self {
         Self {
+            habitat,
             birds: Vec::with_capacity(5),
             bird_col_idxs: Vec::with_capacity(5),
             next_col_to_play: 0,
@@ -27,9 +29,7 @@ impl Default for MatRow {
             eggs_cap: Vec::with_capacity(5),
         }
     }
-}
 
-impl MatRow {
     pub fn col_to_play(&self) -> Option<u8> {
         if self.next_col_to_play >= 5 {
             return None;
@@ -43,9 +43,18 @@ impl MatRow {
     }
 
 
-    pub fn get_bird_actions(&self) -> Vec<Action> {
-        // TODO: Implement bird actions and then populate this stuff
-        vec![]
+    pub fn get_bird_actions(&self, env: &mut WingspanEnv) -> Vec<Action> {
+        let mut actions = vec![];
+
+        // Iterate through birds from right to left
+        for (bird_idx, bird) in self.birds.iter().enumerate().rev() {
+            if let Ok(mut bird_actions) =  bird.activate(env, &self.habitat, bird_idx) {
+                actions.append(&mut bird_actions);
+            }
+        }
+
+        // Actions are pushed onto back of the queue, so reverse to match order of actions
+        actions.into_iter().rev().collect()
     }
 
     pub fn num_spots_to_place_eggs(&self) -> usize {
@@ -183,6 +192,7 @@ impl MatRow {
 #[cfg(test)]
 impl MatRow {
     pub fn new_test(
+        habitat: Habitat,
         bird_col_idxs: Vec<usize>,
         next_col_to_play: usize,
         birds: Vec<BirdCard>,
@@ -192,6 +202,7 @@ impl MatRow {
         eggs_cap: Vec<u8>,
     ) -> Self {
         Self {
+            habitat,
             bird_col_idxs,
             next_col_to_play,
             birds,
@@ -213,9 +224,9 @@ pub struct PlayerMat {
 impl Default for PlayerMat {
     fn default() -> Self {
         Self {
-            forest: Default::default(),
-            grassland: Default::default(),
-            wetland: Default::default(),
+            forest: MatRow::new(Habitat::Forest),
+            grassland: MatRow::new(Habitat::Grassland),
+            wetland: MatRow::new(Habitat::Wetland),
         }
     }
 }
@@ -289,7 +300,7 @@ impl PlayerMat {
         let hab_action = habitat.action();
         let hab_row = self.get_row(&habitat);
 
-        let mut result = hab_row.get_bird_actions();
+        let mut result = vec![Action::BirdActionFromHabitat(*habitat)];
 
         let num_actions = if habitat == &Habitat::Grassland  {
             2

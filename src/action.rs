@@ -6,6 +6,7 @@ use pyo3::prelude::*;
 pub enum Action {
     // First decision of the turn (i.e. play a bird, forest, grassland, wetland)
     ChooseAction,
+    BirdActionFromHabitat(Habitat),
 
     PlayBird,
 
@@ -54,6 +55,13 @@ impl Action {
                 };
 
                 env.populate_action_queue_from_habitat_action(&habitat);
+
+                Ok(())
+            },
+            Action::BirdActionFromHabitat(habitat) => {
+                let mat_row = env.current_player().get_mat().get_row(habitat).clone();
+                let mut actions = mat_row.get_bird_actions(env);
+                env.append_actions(&mut actions);
 
                 Ok(())
             },
@@ -144,6 +152,7 @@ impl Action {
     pub fn is_performable(&self, env: &mut WingspanEnv) -> bool {
         match self {
             Action::ChooseAction => true,
+            Action::BirdActionFromHabitat(_) => true,
             Action::PlayBird => env.current_player_mut().can_play_a_bird_card(),
             Action::GetFood => true,
             Action::GetFoodChoice(_) => true,
@@ -170,6 +179,7 @@ impl Action {
     pub fn action_space_size(&self, env: &WingspanEnv) -> usize {
         match self {
             Action::ChooseAction => 4,
+            Action::BirdActionFromHabitat(_) => 1,
             Action::PlayBird => {
                 env.current_player().get_playable_card_hab_combos().len()
             },
@@ -211,6 +221,7 @@ impl Action {
                     vec![1, 2, 3]
                 }
             },
+            Action::BirdActionFromHabitat(_) => vec![0],
             Action::DiscardFoodOrBirdCard => {
                 let mut result = Action::DiscardFood.valid_actions(env);
                 result.extend(
