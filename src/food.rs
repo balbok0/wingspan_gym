@@ -28,6 +28,18 @@ pub enum FoodIndex {
     Rodent = 4,
 }
 
+impl FoodIndex {
+    pub fn dice_sides(&self) -> Vec<u8> {
+        match self {
+            FoodIndex::Invertebrate => vec![0, 5],
+            FoodIndex::Seed => vec![1, 5],
+            FoodIndex::Fish => vec![2],
+            FoodIndex::Fruit => vec![3],
+            FoodIndex::Rodent => vec![4],
+        }
+    }
+}
+
 impl From<u8> for FoodIndex {
     fn from(value: u8) -> Self {
         match value {

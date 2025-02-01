@@ -87,13 +87,14 @@ impl Player {
         }
     }
 
-    pub fn can_play_a_bird_card(&mut self) -> bool {
+    pub fn can_play_a_bird_card(&mut self, habitats: Vec<Habitat>) -> bool {
         let mut playable_cards = vec![];
         for (idx, card) in self.bird_cards.iter().enumerate() {
             if is_enough_food_to_play_a_card(&card, &self.foods) {
                 let mut cur_card_habitat_combos: Vec<_> = self.mat
                     .playable_habitats(&card)
                     .into_iter()
+                    .filter(|habitat| habitats.contains(habitat))
                     .map(|habitat| (*card, habitat, idx))
                     .collect();
                 playable_cards.append(&mut cur_card_habitat_combos)

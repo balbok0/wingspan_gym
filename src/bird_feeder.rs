@@ -104,11 +104,28 @@ impl BirdFeeder {
         self.dice_out_birdfeeder.len()
     }
 
+    pub fn contains(&self, food_idx: FoodIndex) -> usize {
+        let dice_idxs = food_idx.dice_sides();
+        match food_idx {
+            FoodIndex::Invertebrate => vec![0, 5],
+            FoodIndex::Seed => vec![1, 5],
+            FoodIndex::Fish => vec![2],
+            FoodIndex::Fruit => vec![3],
+            FoodIndex::Rodent => vec![4],
+        };
+
+        self.dice_in_birdfeeder.iter().filter(|dice_idx| dice_idxs.contains(dice_idx)).count()
+    }
+
+    pub fn roll_all_dice_not_in_birdfeeder(&self, rng: &mut StdRng) -> Vec<u8> {
+        sample_dice(rng, self.dice_out_birdfeeder.len())
+    }
+
     pub fn num_actions(&self) -> usize {
         if self.can_reroll() {
-            self.num_dice_in()
-        } else {
             self.num_dice_in() + 1
+        } else {
+            self.num_dice_in()
         }
     }
 

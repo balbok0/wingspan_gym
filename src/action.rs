@@ -9,6 +9,7 @@ pub enum Action {
     BirdActionFromHabitat(Habitat),
 
     PlayBird,
+    PlayBirdHabitat(Habitat),
 
     // Get resource actions
     GetFood,
@@ -66,6 +67,12 @@ impl Action {
                 Ok(())
             },
             Action::PlayBird => {
+                let mut followup_actions = env.current_player_mut().play_a_bird_card(action_idx)?;
+
+                env.append_actions(&mut followup_actions);
+                Ok(())
+            },
+            Action::PlayBirdHabitat(habitat) => {
                 let mut followup_actions = env.current_player_mut().play_a_bird_card(action_idx)?;
 
                 env.append_actions(&mut followup_actions);
@@ -153,7 +160,8 @@ impl Action {
         match self {
             Action::ChooseAction => true,
             Action::BirdActionFromHabitat(_) => true,
-            Action::PlayBird => env.current_player_mut().can_play_a_bird_card(),
+            Action::PlayBird => env.current_player_mut().can_play_a_bird_card(vec![Habitat::Forest, Habitat::Grassland, Habitat::Wetland]),
+            Action::PlayBirdHabitat(habitat) => env.current_player_mut().can_play_a_bird_card(vec![*habitat]),
             Action::GetFood => true,
             Action::GetFoodChoice(_) => true,
             Action::GetEgg => env.current_player().get_mat().can_place_egg(),
@@ -181,6 +189,9 @@ impl Action {
             Action::ChooseAction => 4,
             Action::BirdActionFromHabitat(_) => 1,
             Action::PlayBird => {
+                env.current_player().get_playable_card_hab_combos().len()
+            },
+            Action::PlayBirdHabitat(habitat) => {
                 env.current_player().get_playable_card_hab_combos().len()
             },
             Action::GetFood => env._bird_feeder.num_actions(),
@@ -259,6 +270,7 @@ impl Action {
                     .collect()
             },
             Action::PlayBird
+                | Action::PlayBirdHabitat(_)
                 | Action::GetFood
                 | Action::GetFoodChoice(_)
                 | Action::GetEgg
