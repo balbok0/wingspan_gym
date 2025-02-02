@@ -1,4 +1,4 @@
-use crate::{action::Action, bird_card::BirdCard, error::{WingError, WingResult}, food::FoodIndex, habitat::{self, Habitat}, wingspan_env::WingspanEnv};
+use crate::{action::Action, bird_card::{BirdCard, BirdCardColor}, error::{WingError, WingResult}, food::FoodIndex, habitat::{self, Habitat}, wingspan_env::WingspanEnv};
 
 type BirdResourceRow = [u8; 5];
 
@@ -43,18 +43,24 @@ impl MatRow {
     }
 
 
-    pub fn get_bird_actions(&self, env: &mut WingspanEnv) -> Vec<Action> {
+    pub fn get_bird_actions(&self, env: &mut WingspanEnv) -> (Vec<Action>, Vec<Action>) {
         let mut actions = vec![];
+        let mut end_of_turn_actions = vec![];
 
         // Iterate through birds from right to left
         for (bird_idx, bird) in self.birds.iter().enumerate().rev() {
-            if let Ok(mut bird_actions) =  bird.activate(env, &self.habitat, bird_idx) {
-                actions.append(&mut bird_actions);
+            if bird.color() != &BirdCardColor::Brown {
+                continue
+            }
+
+            if let Ok(mut action_res) =  bird.activate(env, &self.habitat, bird_idx) {
+                actions.append(&mut action_res.immediate_actions);
+                end_of_turn_actions.append(&mut action_res.end_of_turn_actions);
             }
         }
 
         // Actions are pushed onto back of the queue, so reverse to match order of actions
-        actions.into_iter().rev().collect()
+        (actions.into_iter().rev().collect(), end_of_turn_actions)
     }
 
     pub fn num_spots_to_place_eggs(&self) -> usize {
@@ -186,6 +192,35 @@ impl MatRow {
 
     pub fn tuck_card(&mut self, bird_idx: usize) {
         self.tucked_cards[bird_idx] += 1;
+    }
+
+    pub fn add_bird_from_entry(
+        &mut self,
+        bird_card: BirdCard,
+        tucked_cards: u8,
+        cached_food: BirdResourceRow,
+        eggs: u8,
+        eggs_cap: u8,
+    ) -> WingResult<()> {
+        let new_bird_idx = self.birds.len();
+        self.play_a_bird(bird_card)?;
+        self.tucked_cards[new_bird_idx] = tucked_cards;
+        self.cached_food[new_bird_idx] = cached_food;
+        self.eggs[new_bird_idx] = eggs;
+        self.eggs_cap[new_bird_idx] = eggs_cap;
+        Ok(())
+    }
+
+    pub fn remove_bird(&mut self, bird_idx: usize) -> (BirdCard, u8, BirdResourceRow, u8, u8) {
+        let result = (
+            self.birds.remove(bird_idx),
+            self.tucked_cards.remove(bird_idx),
+            self.cached_food.remove(bird_idx),
+            self.eggs.remove(bird_idx),
+            self.eggs_cap.remove(bird_idx),
+        );
+        self.next_col_to_play -= 1;
+        result
     }
 }
 
@@ -323,6 +358,29 @@ impl PlayerMat {
 
     pub fn num_spots_to_discard_eggs(&self) -> usize {
         self.rows().map(|a| MatRow::num_spots_to_discard_eggs(a)).iter().sum()
+    }
+
+    pub fn move_bird(&mut self, bird_card: BirdCard, target_habitat: Habitat) -> WingResult<()> {
+        if self.get_row(&target_habitat).col_to_play().is_none() {
+            return Err(WingError::InvalidAction);
+        }
+
+        let (source_habitat, bird_idx) = self.find_bird(&bird_card).ok_or(WingError::InvalidAction)?;
+
+        let (bird_card, tucked_cards, cached_food, eggs, eggs_cap) = self.get_row_mut(&source_habitat).remove_bird(bird_idx);
+
+        self.get_row_mut(&target_habitat).add_bird_from_entry(bird_card, tucked_cards, cached_food, eggs, eggs_cap)?;
+
+        Ok(())
+    }
+
+    fn find_bird(&self, bird_card: &BirdCard) -> Option<(Habitat, usize)> {
+        for row in self.rows() {
+            if let Some(bird_idx) = row.birds.iter().position(|bc| bc == bird_card) {
+                return Some((row.habitat, bird_idx))
+            }
+        }
+        None
     }
 
     pub fn place_egg(&mut self, idx: u8) -> WingResult<()> {

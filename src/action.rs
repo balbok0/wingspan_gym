@@ -1,4 +1,4 @@
-use crate::{error::{WingError, WingResult}, food::FoodIndex, habitat::Habitat, wingspan_env::WingspanEnv};
+use crate::{bird_card::BirdCard, error::{WingError, WingResult}, food::FoodIndex, habitat::Habitat, wingspan_env::WingspanEnv};
 use pyo3::prelude::*;
 
 
@@ -27,9 +27,12 @@ pub enum Action {
     DiscardFoodChoice(Box<[(FoodIndex, u8)]>), // Discard food of choice N times
     DiscardEgg,
 
+    // Non-standard actions
+    MoveBird(BirdCard, Vec<Habitat>),
 
-    // Do something (typically discard to perform an action)
+    // Wrapper actions
     DoThen(Box<Action>, Box<Action>),
+    Option(Box<Action>),
 }
 
 impl Action {
@@ -61,7 +64,9 @@ impl Action {
             },
             Action::BirdActionFromHabitat(habitat) => {
                 let mat_row = env.current_player().get_mat().get_row(habitat).clone();
-                let mut actions = mat_row.get_bird_actions(env);
+                let (mut actions, mut end_of_turn_actions) = mat_row.get_bird_actions(env);
+                // TODO: Actions here should be empty I think
+                env.append_actions(&mut end_of_turn_actions);
                 env.append_actions(&mut actions);
 
                 Ok(())
@@ -72,7 +77,7 @@ impl Action {
                 env.append_actions(&mut followup_actions);
                 Ok(())
             },
-            Action::PlayBirdHabitat(habitat) => {
+            Action::PlayBirdHabitat(_) => {
                 let mut followup_actions = env.current_player_mut().play_a_bird_card(action_idx)?;
 
                 env.append_actions(&mut followup_actions);
@@ -134,21 +139,35 @@ impl Action {
                 env.current_player_mut().discard_food(*food_idx, *num_food)
             },
             Action::DiscardEgg => env.current_player_mut().get_mat_mut().discard_egg(action_idx),
+            Action::MoveBird(bird_card, habitats) => {
+                let target_habitat = habitats.get(action_idx as usize).ok_or(WingError::InvalidAction)?;
+                env.current_player_mut().get_mat_mut().move_bird(*bird_card, *target_habitat)
+            },
             Action::DoThen(a, b) => {
                 match action_idx {
                     0 => {
+                        // Option rejected
+                        Ok(())
+                    },
+                    1 => {
                         // Option accepted
                         env.push_action(*b.clone());
                         env.push_action(*a.clone());
                         Ok(())
                     },
+                    _ => Err(WingError::InvalidAction)
+                }
+            },
+            Action::Option(a) => {
+                match action_idx {
+                    0 => Ok(()),
                     1 => {
-                        // Option rejected
+                        env.push_action(*a.clone());
                         Ok(())
                     },
                     _ => Err(WingError::InvalidAction)
                 }
-            }
+            },
             // x => {
             //     println!("Action not implemented: {:?}", x);
             //     todo!()
@@ -180,7 +199,11 @@ impl Action {
                     .unwrap_or(true)
             },
             Action::DiscardEgg => env.current_player().get_mat().can_discard_egg(),
+            Action::MoveBird(_, _) => {
+                self.action_space_size(env) > 0
+            },
             Action::DoThen(action_req, action_reward) => action_req.is_performable(env) && action_reward.is_performable(env),
+            Action::Option(action) => action.is_performable(env),
         }
     }
 
@@ -191,7 +214,8 @@ impl Action {
             Action::PlayBird => {
                 env.current_player().get_playable_card_hab_combos().len()
             },
-            Action::PlayBirdHabitat(habitat) => {
+            Action::PlayBirdHabitat(_) => {
+                // Note: card habitat combos are populated with only that habitat
                 env.current_player().get_playable_card_hab_combos().len()
             },
             Action::GetFood => env._bird_feeder.num_actions(),
@@ -218,8 +242,15 @@ impl Action {
             Action::DiscardFood => 5,
             Action::DiscardFoodChoice(choices) => choices.len(),
             Action::DiscardEgg => env.current_player().get_mat().num_spots_to_discard_eggs(),
+            Action::MoveBird(bird_card, habitats) => {
+                env.current_player().get_mat().playable_habitats(bird_card)
+                    .iter()
+                    .filter(|hab| habitats.contains(hab))
+                    .count()
+            },
             // Do it or not
             Action::DoThen(_, _) => 2,
+            Action::Option(_) => 2,
         }
     }
 
@@ -269,6 +300,9 @@ impl Action {
                     })
                     .collect()
             },
+            Action::MoveBird(_, habs) => {
+                (0..habs.len() as u8).collect()
+            }
             Action::PlayBird
                 | Action::PlayBirdHabitat(_)
                 | Action::GetFood
@@ -283,13 +317,13 @@ impl Action {
                 => {
                 (0..self.action_space_size(env) as u8).into_iter().collect()
             },
-            Action::DoThen(action_req, _) => {
-                if action_req.is_performable(env) {
+            Action::DoThen(action, _) | Action::Option(action) => {
+                if action.is_performable(env) {
                     vec![0, 1]
                 } else {
-                    vec![1]
+                    vec![0]
                 }
-            }
+            },
         }
     }
 }
