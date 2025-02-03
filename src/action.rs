@@ -26,6 +26,8 @@ pub enum Action {
     DiscardFood,
     DiscardFoodChoice(Box<[(FoodIndex, u8)]>), // Discard food of choice N times
     DiscardEgg,
+    // Cache food of choice N times on specific bird.
+    CacheFoodChoice(Box<[(FoodIndex, u8)]>, Habitat, usize),
 
     // Non-standard actions
     MoveBird(BirdCard, Vec<Habitat>),
@@ -33,10 +35,11 @@ pub enum Action {
     // Wrapper actions
     DoThen(Box<Action>, Box<Action>),
     Option(Box<Action>),
+    MultipleActions(Vec<Action>),
 }
 
 impl Action {
-    pub fn perform_action(&self, action_idx: u8, env: &mut WingspanEnv) -> WingResult<()> {
+    pub fn perform_action(&mut self, action_idx: u8, env: &mut WingspanEnv) -> WingResult<()> {
         match self {
             Action::ChooseAction => {
                 let habitat = match action_idx {
@@ -139,6 +142,14 @@ impl Action {
                 env.current_player_mut().discard_food(*food_idx, *num_food)
             },
             Action::DiscardEgg => env.current_player_mut().get_mat_mut().discard_egg(action_idx),
+            Action::CacheFoodChoice(foods, habitat, bird_idx) => {
+                let (food_index, num_food) = foods.get(action_idx as usize).ok_or(WingError::InvalidAction)?;
+                let row = env.current_player_mut().get_mat_mut().get_row_mut(habitat);
+                for _ in 0..*num_food {
+                    row.cache_food(*bird_idx, *food_index);
+                }
+                Ok(())
+            },
             Action::MoveBird(bird_card, habitats) => {
                 let target_habitat = habitats.get(action_idx as usize).ok_or(WingError::InvalidAction)?;
                 env.current_player_mut().get_mat_mut().move_bird(*bird_card, *target_habitat)
@@ -168,6 +179,10 @@ impl Action {
                     _ => Err(WingError::InvalidAction)
                 }
             },
+            Action::MultipleActions(actions) => {
+                env.append_actions(actions);
+                Ok(())
+            }
             // x => {
             //     println!("Action not implemented: {:?}", x);
             //     todo!()
@@ -199,11 +214,13 @@ impl Action {
                     .unwrap_or(true)
             },
             Action::DiscardEgg => env.current_player().get_mat().can_discard_egg(),
+            Action::CacheFoodChoice(_, _, _) => true,
             Action::MoveBird(_, _) => {
                 self.action_space_size(env) > 0
             },
             Action::DoThen(action_req, action_reward) => action_req.is_performable(env) && action_reward.is_performable(env),
             Action::Option(action) => action.is_performable(env),
+            Action::MultipleActions(_) => true,
         }
     }
 
@@ -242,6 +259,7 @@ impl Action {
             Action::DiscardFood => 5,
             Action::DiscardFoodChoice(choices) => choices.len(),
             Action::DiscardEgg => env.current_player().get_mat().num_spots_to_discard_eggs(),
+            Action::CacheFoodChoice(food_choices, _, _) => food_choices.len(),
             Action::MoveBird(bird_card, habitats) => {
                 env.current_player().get_mat().playable_habitats(bird_card)
                     .iter()
@@ -251,6 +269,7 @@ impl Action {
             // Do it or not
             Action::DoThen(_, _) => 2,
             Action::Option(_) => 2,
+            Action::MultipleActions(_) => 1,
         }
     }
 
@@ -314,6 +333,8 @@ impl Action {
                 | Action::LayEggAtLoc(_, _, _)
                 | Action::DiscardBonusCard
                 | Action::DiscardEgg
+                | Action::CacheFoodChoice(_, _, _)
+                | Action::MultipleActions(_)
                 => {
                 (0..self.action_space_size(env) as u8).into_iter().collect()
             },

@@ -129,7 +129,7 @@ impl WingspanEnv {
         if !action.is_performable(self) {
             return Err(WingError::InvalidAction);
         }
-        let action = self._action_queue.pop().unwrap();
+        let mut action = self._action_queue.pop().unwrap();
         if let Err(e) = action.perform_action(action_idx, self) {
             self.push_action(action);
             return Err(e);
