@@ -23,7 +23,10 @@ impl BirdCard {
         | Self::ClarksGrebe
         | Self::ForstersTern => {
         // draw 1 [card]. if you do, discard 1 [card] from your hand at the end of your turn.
-        todo!("Random function callback needs to be implemented")
+        Ok(ActivateResult {
+          immediate_actions: vec![Action::GetBirdCard],
+          end_of_turn_actions: vec![Action::DiscardBirdCard],
+        })
       },
       Self::RedWattlebird => {
         // gain 1 [nectar] from the supply for each bird with a wingspan less than 49cm in your [forest].
@@ -401,7 +404,14 @@ impl BirdCard {
       },
       Self::RufousNightHeron => {
         // look at a [card] from the deck. if it can live in [wetland], tuck it behind this bird. if not, discard it.
-        todo!()
+        let bird_card = env._bird_deck.draw_cards_from_deck(1)[0];
+
+        let is_valid = bird_card.habitats().contains(&Habitat::Wetland);
+
+        if is_valid {
+          env.current_player_mut().get_mat_mut().get_row_mut(habitat).tuck_card(bird_idx);
+        }
+        Ok(Default::default())
       },
       Self::RedVentedBulbul => {
         // if you have at least 1 [fruit] in your supply, lay 1 [egg] on this bird.
@@ -437,7 +447,19 @@ impl BirdCard {
       },
       Self::WedgeTailedEagle => {
         // look at a [card] from the deck. if its wingspan is over 65cm, tuck it behind this bird and cache 1 [rodent] from the supply on this bird. if not, discard it.
-        todo!()
+        let bird_card = env._bird_deck.draw_cards_from_deck(1)[0];
+
+        let is_valid = match bird_card.wingspan() {
+          Some(x) => x > 65,
+          None => true
+        };
+
+        if is_valid {
+          let row = env.current_player_mut().get_mat_mut().get_row_mut(habitat);
+          row.tuck_card(bird_idx);
+          row.cache_food(bird_idx, FoodIndex::Rodent);
+        }
+        Ok(Default::default())
       },
       Self::GreatSpottedWoodpecker => {
         // gain 1 [invertebrate] or [seed] from the birdfeeder, if there is one.
@@ -765,7 +787,15 @@ impl BirdCard {
       },
       Self::BrownFalcon => {
         // look at a [card] from the deck. if its food cost includes an [invertebrate] or a [rodent], tuck it behind this bird. if not, discard it.
-        todo!()
+        let bird_card = env._bird_deck.draw_cards_from_deck(1)[0];
+
+        let food_cost = bird_card.cost().0;
+        let is_valid = food_cost[FoodIndex::Rodent as usize].is_some() || food_cost[FoodIndex::Invertebrate as usize].is_some();
+
+        if is_valid {
+          env.current_player_mut().get_mat_mut().get_row_mut(habitat).tuck_card(bird_idx);
+        }
+        Ok(Default::default())
       },
       Self::WhiteCrestedLaughingthrush => {
         // tuck 1 [card] from your hand behind this bird. if you do, gain 1 [invertebrate], [seed], or [fruit] from the birdfeeder.
@@ -834,7 +864,8 @@ impl BirdCard {
       },
       Self::BrownPelican => {
         // gain 3 [fish] from the supply.
-        todo!()
+        env.current_player_mut().add_food(FoodIndex::Fish, 3);
+        Ok(Default::default())
       },
       Self::GreenBeeEater => {
         // if there is at least 1 bird on the tray that has [invertebrate] in its food cost, tuck 1 of them behind this bird.
@@ -947,7 +978,17 @@ impl BirdCard {
       },
       Self::GreaterRoadrunner => {
         // look at a [card] from the deck. if less than 50cm, tuck it behind this bird. if not, discard it.
-        todo!()
+        let bird_card = env._bird_deck.draw_cards_from_deck(1)[0];
+
+        let is_valid = match bird_card.wingspan() {
+          Some(x) => x < 50,
+          None => true
+        };
+
+        if is_valid {
+          env.current_player_mut().get_mat_mut().get_row_mut(habitat).tuck_card(bird_idx);
+        }
+        Ok(Default::default())
       },
       Self::Kea => {
         // draw 1 bonus card. you may discard any number of [wild] to draw that many additional bonus cards. keep 1 of the cards you drew and discard the rest.
@@ -1029,7 +1070,17 @@ impl BirdCard {
         | Self::GreatHornedOwl
         | Self::PeregrineFalcon => {
         // look at a [card] from the deck. if less than 100cm, tuck it behind this bird. if not, discard it.
-        todo!()
+        let bird_card = env._bird_deck.draw_cards_from_deck(1)[0];
+
+        let is_valid = match bird_card.wingspan() {
+          Some(x) => x < 100,
+          None => true
+        };
+
+        if is_valid {
+          env.current_player_mut().get_mat_mut().get_row_mut(habitat).tuck_card(bird_idx);
+        }
+        Ok(Default::default())
       },
       Self::SquaccoHeron => {
         // gain 1 face-up [card] that can live in [wetland].
@@ -1261,7 +1312,19 @@ impl BirdCard {
       },
       Self::GreyButcherbird => {
         // look at a [card] from the deck. if its wingspan is less than 40cm, tuck it behind this bird and cache 1 [rodent] from the supply on this bird. if not, discard it.
-        todo!()
+        let bird_card = env._bird_deck.draw_cards_from_deck(1)[0];
+
+        let is_valid = match bird_card.wingspan() {
+          Some(x) => x < 40,
+          None => true
+        };
+
+        if is_valid {
+          let row = env.current_player_mut().get_mat_mut().get_row_mut(habitat);
+          row.tuck_card(bird_idx);
+          row.cache_food(bird_idx, FoodIndex::Rodent);
+        }
+        Ok(Default::default())
       },
       Self::CommonBlackbird
         | Self::LongTailedTit => {
@@ -1280,7 +1343,10 @@ impl BirdCard {
         | Self::BlackCrownedNightHeron
         | Self::FishCrow => {
         // discard 1 [egg] from any of your other birds to gain 1 [wild] from the supply.
-        todo!()
+        Ok(ActivateResult {
+          immediate_actions: vec![Action::DoThen(Box::new(Action::DiscardEgg), Box::new(Action::GetFood))],
+          ..Default::default()
+        })
       },
       Self::BlackNoddy => {
         // reset the birdfeeder and gain all [fish], if there are any. you may discard any of these [fish] to tuck that many [card] from the deck behind this bird instead.
@@ -1505,7 +1571,17 @@ impl BirdCard {
         | Self::RedTailedHawk
         | Self::SwainsonsHawk => {
         // look at a [card] from the deck. if less than 75cm, tuck it behind this bird. if not, discard it.
-        todo!()
+        let bird_card = env._bird_deck.draw_cards_from_deck(1)[0];
+
+        let is_valid = match bird_card.wingspan() {
+          Some(x) => x < 75,
+          None => true
+        };
+
+        if is_valid {
+          env.current_player_mut().get_mat_mut().get_row_mut(habitat).tuck_card(bird_idx);
+        }
+        Ok(Default::default())
       },
       Self::RedJunglefowl => {
         // count the [egg] on all of your birds. if the total is fewer than 6 [egg], lay 1 [egg] on this bird.
