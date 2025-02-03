@@ -105,7 +105,7 @@ impl Player {
         !self._playable_card_hab_combos.is_empty()
     }
 
-    pub fn play_a_bird_card(&mut self, bird_card_idx: u8) -> WingResult<Vec<Action>> {
+    pub fn play_a_bird_card(&mut self, bird_card_idx: u8) -> WingResult<(BirdCard, Habitat, usize, Vec<Action>)> {
         let bird_card_idx = bird_card_idx as usize;
         if bird_card_idx >= self._playable_card_hab_combos.len() {
             return Err(WingError::InvalidAction);
@@ -118,7 +118,7 @@ impl Player {
         self.bird_cards.remove(orig_card_idx);
 
         food_actions.append(&mut egg_actions);
-        Ok(food_actions)
+        Ok((bird_card, hab, self.mat.get_row(&hab).get_birds().len(), food_actions))
     }
 
     fn pay_bird_cost(&mut self, bird_card: &BirdCard) -> WingResult<Vec<Action>> {

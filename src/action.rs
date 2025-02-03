@@ -1,4 +1,4 @@
-use crate::{bird_card::BirdCard, error::{WingError, WingResult}, food::FoodIndex, habitat::Habitat, wingspan_env::WingspanEnv};
+use crate::{bird_card::{BirdCard, BirdCardColor}, error::{WingError, WingResult}, food::FoodIndex, habitat::Habitat, wingspan_env::WingspanEnv};
 use pyo3::prelude::*;
 
 
@@ -17,6 +17,7 @@ pub enum Action {
     GetEgg,
     LayEggAtLoc(Habitat, usize, usize),
     GetBirdCard,
+    GetBirdCardFromDeck,
 
     // Discard actions,
     DiscardFoodOrBirdCard,
@@ -36,6 +37,14 @@ pub enum Action {
     DoThen(Box<Action>, Box<Action>),
     Option(Box<Action>),
     MultipleActions(Vec<Action>),
+
+    // Change Player allows for a temporary change of a player.
+    // This typically sandwiches 1 action with Change Player to temp -> Do Action -> Change Player back
+    ChangePlayer(usize),
+
+    // Allows to choose a starting player
+    // TODO: We need to pass in FnMut here I think?
+    // ChoosePlayer,
 }
 
 impl Action {
@@ -74,14 +83,14 @@ impl Action {
 
                 Ok(())
             },
-            Action::PlayBird => {
-                let mut followup_actions = env.current_player_mut().play_a_bird_card(action_idx)?;
+            Action::PlayBird | Action::PlayBirdHabitat(_) => {
+                let (bird_card, habitat, bird_idx, mut followup_actions) = env.current_player_mut().play_a_bird_card(action_idx)?;
 
-                env.append_actions(&mut followup_actions);
-                Ok(())
-            },
-            Action::PlayBirdHabitat(_) => {
-                let mut followup_actions = env.current_player_mut().play_a_bird_card(action_idx)?;
+                if bird_card.color() == &BirdCardColor::White {
+                    let mut action_result = bird_card.activate(env, &habitat, bird_idx).unwrap();
+                    env.append_actions(&mut action_result.end_of_turn_actions);
+                    env.append_actions(&mut action_result.immediate_actions);
+                }
 
                 env.append_actions(&mut followup_actions);
                 Ok(())
@@ -112,6 +121,11 @@ impl Action {
             },
             Action::GetBirdCard => {
                 let card = env._bird_deck.draw_card(action_idx)?;
+                env.current_player_mut().add_bird_card(card);
+                Ok(())
+            },
+            Action::GetBirdCardFromDeck => {
+                let card = env._bird_deck.draw_cards_from_deck(1)[0];
                 env.current_player_mut().add_bird_card(card);
                 Ok(())
             },
@@ -182,6 +196,13 @@ impl Action {
             Action::MultipleActions(actions) => {
                 env.append_actions(actions);
                 Ok(())
+            },
+            Action::ChangePlayer(player_idx) => {
+                if *player_idx >= env.config().num_players {
+                    return Err(WingError::InvalidAction);
+                }
+                env.set_current_player(*player_idx);
+                Ok(())
             }
             // x => {
             //     println!("Action not implemented: {:?}", x);
@@ -200,7 +221,7 @@ impl Action {
             Action::GetFoodChoice(_) => true,
             Action::GetEgg => env.current_player().get_mat().can_place_egg(),
             Action::LayEggAtLoc(_, _, _) => self.action_space_size(&env) > 0,
-            Action::GetBirdCard => env.current_player().get_bird_cards().len() < env.config().hand_limit.into(),
+            Action::GetBirdCard | Action::GetBirdCardFromDeck => env.current_player().get_bird_cards().len() < env.config().hand_limit.into(),
             Action::DiscardFoodOrBirdCard => Action::DiscardFood.is_performable(env) || Action::DiscardBirdCard.is_performable(env),
             Action::DiscardBirdCard | Action::TuckBirdCard(_, _) => env.current_player().can_discard_bird_card(),
             Action::DiscardBonusCard => env.current_player().get_bonus_cards().len() > 0,
@@ -221,6 +242,7 @@ impl Action {
             Action::DoThen(action_req, action_reward) => action_req.is_performable(env) && action_reward.is_performable(env),
             Action::Option(action) => action.is_performable(env),
             Action::MultipleActions(_) => true,
+            Action::ChangePlayer(player_idx) => *player_idx < env.config().num_players,
         }
     }
 
@@ -249,6 +271,7 @@ impl Action {
                 }
             }
             Action::GetBirdCard => env._bird_deck.num_actions(),
+            Action::GetBirdCardFromDeck => 1,
             Action::DiscardFoodOrBirdCard => {
                 5 + env.current_player().get_bird_cards().len()
             },
@@ -270,6 +293,7 @@ impl Action {
             Action::DoThen(_, _) => 2,
             Action::Option(_) => 2,
             Action::MultipleActions(_) => 1,
+            Action::ChangePlayer(_) => 1,
         }
     }
 
@@ -328,6 +352,7 @@ impl Action {
                 | Action::GetFoodChoice(_)
                 | Action::GetEgg
                 | Action::GetBirdCard
+                | Action::GetBirdCardFromDeck
                 | Action::DiscardBirdCard
                 | Action::TuckBirdCard(_, _)
                 | Action::LayEggAtLoc(_, _, _)
@@ -335,6 +360,7 @@ impl Action {
                 | Action::DiscardEgg
                 | Action::CacheFoodChoice(_, _, _)
                 | Action::MultipleActions(_)
+                | Action::ChangePlayer(_)
                 => {
                 (0..self.action_space_size(env) as u8).into_iter().collect()
             },

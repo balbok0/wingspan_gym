@@ -1,4 +1,4 @@
-use crate::{action::Action, bird_card::{BirdCard, BirdCardColor}, error::{WingError, WingResult}, food::FoodIndex, habitat::{self, Habitat}, wingspan_env::WingspanEnv};
+use crate::{action::Action, bird_card::{BirdCard, BirdCardColor}, error::{WingError, WingResult}, food::FoodIndex, habitat::Habitat, wingspan_env::WingspanEnv};
 
 type BirdResourceRow = [u8; 5];
 

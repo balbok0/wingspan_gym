@@ -385,7 +385,10 @@ impl BirdCard {
       Self::DarkEyedJunco
         | Self::PineSiskin => {
         // tuck 1 [card] from your hand behind this bird. if you do, gain 1 [seed] from the supply.
-        todo!()
+        Ok(ActivateResult {
+          immediate_actions: vec![Action::DoThen(Box::new(Action::TuckBirdCard(*habitat, bird_idx)), Box::new(Action::GetFoodChoice(Box::new([FoodIndex::Seed]))))],
+          ..Default::default()
+        })
       },
       Self::GouldsFinch => {
         // play a bird. pay its normal food and egg cost. if it has a "when played" or "game end" power, you may use it.
@@ -940,7 +943,27 @@ impl BirdCard {
       Self::AmericanBittern
         | Self::CommonLoon => {
         // player(s) with the fewest birds in their [wetland] draw 1 [card].
-        todo!()
+        let min_birds_num = (0..env.config().num_players).into_iter()
+          .map(|idx| {
+            env.get_player(idx).get_mat().get_row(&Habitat::Wetland).get_birds().len()
+          })
+          .min()
+          .unwrap();
+
+        let cur_player_idx = env.current_player_idx();
+
+        for player_idx in 0..min_birds_num {
+          if min_birds_num < env.get_player(player_idx).get_mat().get_row(&Habitat::Wetland).get_birds().len() {
+            continue;
+          }
+
+          env.set_current_player(player_idx);
+          let bird_card = env._bird_deck.draw_cards_from_deck(1)[0];
+          env.current_player_mut().add_bird_card(bird_card);
+        }
+
+        env.set_current_player(cur_player_idx);
+        Ok(Default::default())
       },
       Self::CommonCuckoo => {
         // when another player takes the "lay eggs" action, this bird lays 1 [egg] on another bird with a [bowl] or [ground] nest.
@@ -1497,7 +1520,25 @@ impl BirdCard {
       Self::IndigoBunting
         | Self::WesternTanager => {
         // gain 1 [invertebrate] or [fruit] from the birdfeeder, if available.
-        todo!()
+        let num_inverterbrate = env._bird_feeder.contains(FoodIndex::Invertebrate);
+        let num_fruit = env._bird_feeder.contains(FoodIndex::Fruit);
+
+        if num_fruit == 0 || num_inverterbrate == 0 {
+          return Ok(Default::default());
+        }
+
+        let mut v = vec![];
+        if num_fruit > 0 {
+          v.push(FoodIndex::Fruit);
+        }
+        if num_inverterbrate > 0 {
+          v.push(FoodIndex::Invertebrate);
+        }
+
+        Ok(ActivateResult{
+          immediate_actions: vec![Action::GetFoodChoice(v.into_boxed_slice())],
+          ..Default::default()
+        })
       },
       Self::BeardedReedling => {
         // for each other bird in this column with an egg on it, lay 1 [egg] on this bird.
@@ -1610,7 +1651,18 @@ impl BirdCard {
       },
       Self::SarusCrane => {
         // each player may discard 1 [egg] to draw 1 [card] from the deck.
-        todo!()
+        let actions = (0..env.config().num_players)
+          .flat_map(|player_idx| {
+            [
+              Action::ChangePlayer(player_idx),
+              Action::DoThen(Box::new(Action::DiscardEgg), Box::new(Action::GetBirdCardFromDeck))
+            ]
+          }).collect();
+
+        Ok(ActivateResult{
+          immediate_actions: actions,
+          ..Default::default()
+        })
       },
       Self::GreatHornbill => {
         // all players may tuck a [card] from their hand under a bird in their [forest] and/or cache 1 [fruit] from their supply on a bird in their [forest].
