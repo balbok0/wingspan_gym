@@ -87,9 +87,10 @@ impl Action {
                 let (bird_card, habitat, bird_idx, mut followup_actions) = env.current_player_mut().play_a_bird_card(action_idx)?;
 
                 if bird_card.color() == &BirdCardColor::White {
-                    let mut action_result = bird_card.activate(env, &habitat, bird_idx).unwrap();
-                    env.append_actions(&mut action_result.end_of_turn_actions);
-                    env.append_actions(&mut action_result.immediate_actions);
+                    // TODO: After all (from core) of the BirdCard actions are implemented, do uncomment below
+                    // let mut action_result = bird_card.activate(env, &habitat, bird_idx).unwrap();
+                    // env.append_actions(&mut action_result.end_of_turn_actions);
+                    // env.append_actions(&mut action_result.immediate_actions);
                 }
 
                 env.append_actions(&mut followup_actions);

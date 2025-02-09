@@ -53,10 +53,11 @@ impl MatRow {
                 continue
             }
 
-            if let Ok(mut action_res) =  bird.activate(env, &self.habitat, bird_idx) {
-                actions.append(&mut action_res.immediate_actions);
-                end_of_turn_actions.append(&mut action_res.end_of_turn_actions);
-            }
+            // TODO: After all (from core) of the BirdCard actions are implemented, do uncomment below
+            // if let Ok(mut action_res) =  bird.activate(env, &self.habitat, bird_idx) {
+            //     actions.append(&mut action_res.immediate_actions);
+            //     end_of_turn_actions.append(&mut action_res.end_of_turn_actions);
+            // }
         }
 
         // Actions are pushed onto back of the queue, so reverse to match order of actions
