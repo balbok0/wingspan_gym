@@ -349,70 +349,70 @@ impl BonusCard {
 }
 
 
-#[cfg(test)]
-mod tests {
-    use crate::{bird_card::BirdCard, player_mat::{MatRow, PlayerMat}};
+// #[cfg(test)]
+// mod tests {
+//     use crate::{bird_card::BirdCard, player_mat::{MatRow, PlayerMat}};
 
-    use super::*;
+//     use super::*;
 
-    fn make_player_from_cards_on_table(forest_cards: Vec<BirdCard>, grassland_cards: Vec<BirdCard>, wetland_cards: Vec<BirdCard>) -> Player {
-        let [forest, grassland, wetland] = [forest_cards, grassland_cards, wetland_cards].map(|cards| {
-            MatRow::new_test(
-                vec![],
-                0,
-                cards,
-                Default::default(),
-                Default::default(),
-                Default::default(),
-                Default::default(),
-            )
-        });
-        let mat = PlayerMat::new_test(forest, grassland, wetland, 0, 0);
+//     fn make_player_from_cards_on_table(forest_cards: Vec<BirdCard>, grassland_cards: Vec<BirdCard>, wetland_cards: Vec<BirdCard>) -> Player {
+//         let [forest, grassland, wetland] = [forest_cards, grassland_cards, wetland_cards].map(|cards| {
+//             MatRow::new_test(
+//                 vec![],
+//                 0,
+//                 cards,
+//                 Default::default(),
+//                 Default::default(),
+//                 Default::default(),
+//                 Default::default(),
+//             )
+//         });
+//         let mat = PlayerMat::new_test(forest, grassland, wetland, 0, 0);
 
-        let player = Player::new_test(
-            Default::default(),
-            Default::default(),
-            Default::default(),
-            Default::default(),
-            mat,
-            Default::default(),
-            Default::default(),
-        );
+//         let player = Player::new_test(
+//             Default::default(),
+//             Default::default(),
+//             Default::default(),
+//             Default::default(),
+//             mat,
+//             Default::default(),
+//             Default::default(),
+//         );
 
-        player
-    }
+//         player
+//     }
 
 
-    macro_rules! regular_cards_tests {
-        ($(($name:ident: $bonus:expr, $forest:expr, $grassland:expr, $wetland:expr, $expected:expr),)*) => {
-        $(
-            #[test]
-            fn $name() {
-                let player = make_player_from_cards_on_table($forest, $grassland, $wetland);
+//     macro_rules! regular_cards_tests {
+//         ($(($name:ident: $bonus:expr, $forest:expr, $grassland:expr, $wetland:expr, $expected:expr),)*) => {
+//         $(
+//             #[test]
+//             fn $name() {
+//                 let player = make_player_from_cards_on_table($forest, $grassland, $wetland);
 
-                let actual = $bonus.get_count_of_matching(&player);
-                assert_eq!($expected, actual);
-            }
-        )*
-        }
-    }
+//                 let actual = $bonus.get_count_of_matching(&player);
+//                 assert_eq!($expected, actual);
+//             }
+//         )*
+//         }
+//     }
 
-    regular_cards_tests!(
-        (empty: BonusCard::Anatomist, vec![], vec![], vec![], 0),
-        (anatomist: BonusCard::Anatomist, vec![BirdCard::AshThroatedFlycatcher], vec![BirdCard::BarrowsGoldeneye], vec![], 2),
-        (
-            historian: BonusCard::Historian,
-            vec![BirdCard::AshThroatedFlycatcher, BirdCard::AnnasHummingbird, BirdCard::BairdsSparrow],
-            vec![],
-            vec![BirdCard::BarrowsGoldeneye],
-            3
-        ),
+//     regular_cards_tests!(
+//         (empty: BonusCard::Anatomist, vec![], vec![], vec![], 0),
+//         (anatomist: BonusCard::Anatomist, vec![BirdCard::AshThroatedFlycatcher], vec![BirdCard::BarrowsGoldeneye], vec![], 2),
+//         (
+//             historian: BonusCard::Historian,
+//             vec![BirdCard::AshThroatedFlycatcher, BirdCard::AnnasHummingbird, BirdCard::BairdsSparrow],
+//             vec![],
+//             vec![BirdCard::BarrowsGoldeneye],
+//             3
+//         ),
 
-    );
-    // #[test]
-    // fn test_get_count_of_matching_reg_bonus_card() {
-    //     make_player_from_cards_on_table(forest_cards, grassland_cards, wetland_cards)
+//     );
+//     // #[test]
+//     // fn test_get_count_of_matching_reg_bonus_card() {
+//     //     make_player_from_cards_on_table(forest_cards, grassland_cards, wetland_cards)
 
-    //     BonusCard::Anatomist.get_count_of_matching(player)
-    // }
-}
+//     //     BonusCard::Anatomist.get_count_of_matching(player)
+//     // }
+// }

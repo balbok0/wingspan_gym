@@ -459,15 +459,11 @@ impl PlayerMat {
         forest: MatRow,
         grassland: MatRow,
         wetland: MatRow,
-        num_eggs: u8,
-        eggs_cap: u8,
     ) -> Self {
         Self {
             forest,
             grassland,
             wetland,
-            num_eggs,
-            eggs_cap,
         }
     }
 }
