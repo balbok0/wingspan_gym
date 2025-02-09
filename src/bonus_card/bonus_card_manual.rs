@@ -356,18 +356,26 @@ mod tests {
     use super::*;
 
     fn make_player_from_cards_on_table(forest_cards: Vec<BirdCard>, grassland_cards: Vec<BirdCard>, wetland_cards: Vec<BirdCard>) -> Player {
-        let [forest, grassland, wetland] = [forest_cards, grassland_cards, wetland_cards].map(|cards| {
-            MatRow::new_test(
-                vec![],
-                0,
-                cards,
-                Default::default(),
-                Default::default(),
-                Default::default(),
-                Default::default(),
-            )
-        });
-        let mat = PlayerMat::new_test(forest, grassland, wetland, 0, 0);
+        let env_rows: Vec<_> = [forest_cards, grassland_cards, wetland_cards]
+            .into_iter()
+            .zip([Habitat::Forest, Habitat::Grassland, Habitat::Wetland])
+            .map(|(cards, habitat)| {
+                MatRow::new_test(
+                    habitat,
+                    vec![],
+                    0,
+                    cards,
+                    Default::default(),
+                    Default::default(),
+                    Default::default(),
+                    Default::default(),
+                )
+            })
+            .collect();
+        let forest = env_rows[0].clone();
+        let grassland = env_rows[1].clone();
+        let wetland = env_rows[2].clone();
+        let mat = PlayerMat::new_test(forest, grassland, wetland);
 
         let player = Player::new_test(
             Default::default(),

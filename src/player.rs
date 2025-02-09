@@ -292,7 +292,7 @@ impl Player {
     pub fn new_test(
         foods: Foods,
         bird_cards: Vec<BirdCard>,
-        bonus_cards: Vec<BirdCard>,
+        bonus_cards: Vec<BonusCard>,
         turns_left: u8,
         mat: PlayerMat,
         end_of_round_points: u8,
