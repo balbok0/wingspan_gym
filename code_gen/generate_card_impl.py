@@ -7,6 +7,7 @@ from utils import load_all_cards, FOOD_TYPES, HABITATS, common_name_to_enum_name
 bird_impl_file_path = Path(__file__).parent.parent / "src" / "bird_card" / "bird_card_impl.rs"
 
 bird_action_impl_file_path = Path(__file__).parent.parent / "src" / "bird_card" / "bird_card_action_impl.rs"
+bird_action_test_file_path = Path(__file__).parent.parent / "src" / "bird_card" / "test_bird_card_action_impl.rs"
 
 
 def main():
@@ -258,8 +259,6 @@ def main():
 
 
     # # Return early to not overwrite actual work
-    # if bird_action_impl_file_path.exists():
-    #     return
 
     power_birds = (
         birds
@@ -269,37 +268,76 @@ def main():
     )
 
     # Setup of manual impl of bird cards
-    with open(bird_action_impl_file_path, mode="w") as f:
-        # Impl block
-        f.writelines([
-            "use super::BirdCard;\n",
-            "use crate::wingspan_env::WingspanEnv;\n",
-            "\nimpl BirdCard {\n",
-        ])
+    if bird_action_impl_file_path.exists():
+        with open(bird_action_impl_file_path, mode="w") as f:
+            # Impl block
+            f.writelines([
+                "use super::BirdCard;\n",
+                "use crate::wingspan_env::WingspanEnv;\n",
+                "\nimpl BirdCard {\n",
+            ])
 
-        # Activate function
-        f.writelines([
-            "  pub fn activate(&self, env: &mut WingspanEnv) {\n",
-            "    match self {\n",
-        ])
+            # Activate function
+            f.writelines([
+                "  pub fn activate(&self, env: &mut WingspanEnv) {\n",
+                "    match self {\n",
+            ])
 
-        activate_lines = []
-        for row in power_birds.iter_rows(named=True):
-            birds_line = "\n        | ".join([f"Self::{em}" for em in row["enum_name"]])
+            activate_lines = []
+            for row in power_birds.iter_rows(named=True):
+                birds_line = "\n        | ".join([f"Self::{em}" for em in row["enum_name"]])
 
-            bird_line = f"      {birds_line} => {{\n"
-            bird_line += f"        // {row['power_text']}\n"
-            bird_line += "        todo!()\n"
-            bird_line += "      },\n"
-            activate_lines.append(bird_line)
+                bird_line = f"      {birds_line} => {{\n"
+                bird_line += f"        // {row['power_text']}\n"
+                bird_line += "        todo!()\n"
+                bird_line += "      },\n"
+                activate_lines.append(bird_line)
 
-        f.writelines([
-            *activate_lines,
-            "    }\n",
-            "  }\n"
-        ])
-        # Close impl block
-        f.write("}\n")
+            f.writelines([
+                *activate_lines,
+                "    }\n",
+                "  }\n"
+            ])
+            # Close impl block
+            f.write("}\n")
+
+#     with open(bird_action_test_file_path, mode="w") as f:
+#         f.writelines([
+#             "use super::BirdCard;\n",
+#             "use crate::wingspan_env::WingspanEnv;\n"
+#             "\n",
+#         ])
+
+#         f.writelines([
+#             "#[cfg(test)]\n",
+#             "mod test {\n",
+#             "  use crate::{bird_card::BirdCard, habitat::Habitat, wingspan_env::{WingspanEnv, WingspanEnvConfigBuilder}};\n",
+#             "\n",
+#   """
+#   macro_rules! test_bird_card {
+#       ($test_name:ident, $bird_name:ident, $habitat:expr) => {
+#           #[test]
+#           fn $test_name() {
+#               let config_builder = WingspanEnvConfigBuilder::default();
+#               let mut env = WingspanEnv::try_new(config_builder.build().unwrap());
+
+#               let bird_card = BirdCard::$bird_name;
+#               let habitat = $habitat;
+
+#               env.current_player_mut().get_mat_mut().get_row_mut(&habitat).play_a_bird(bird_card);
+
+#               let _ = bird_card.activate(&mut env, &habitat, 0);
+#           }
+#       };
+#   }
+#   """,
+#             "\n",
+#         ])
+
+
+
+#         f.writelines(["}\n",])
+
 
 if __name__ == "__main__":
     main()
