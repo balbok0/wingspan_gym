@@ -304,12 +304,10 @@ impl PyWingspanEnv {
         slf.borrow_mut().inner.reset(seed)
     }
 
-    pub fn step(slf: &Bound<'_, Self>, action_idx: u8) -> PyResult<Option<StepResult>> {
+    pub fn step(slf: &Bound<'_, Self>, action_idx: u8) -> PyResult<StepResult> {
         match slf.borrow_mut().inner.step(action_idx) {
-            // Ok(x) => return Ok(Some(x)),
-            // FIXME: for now returning none, so it doesn't freak out
-            Ok(x) => Ok(Some(x)),
-            Err(WingError::InvalidAction) => Ok(None),
+            Ok(x) => Ok(x),
+            Err(WingError::InvalidAction) => Ok(StepResult::Invalid),
             // Err(x) => return Err(x.into()),
         }
     }

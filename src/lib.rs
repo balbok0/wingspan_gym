@@ -1,3 +1,4 @@
+use action::PyAction;
 use pyo3::prelude::*;
 use step_result::StepResult;
 use wingspan_env::PyWingspanEnv;
@@ -24,6 +25,7 @@ mod step_result;
 fn wingspan_gym(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyWingspanEnv>()?;
     m.add_class::<StepResult>()?;
+    m.add_class::<PyAction>()?;
 
     Ok(())
 }
