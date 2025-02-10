@@ -51,7 +51,7 @@ impl WingspanEnv {
             _bird_deck: Default::default(),
             _bonus_deck: Default::default(),
             _bird_feeder: Default::default(),
-            _players: Vec::with_capacity(num_players as usize),
+            _players: Vec::with_capacity(num_players),
             _action_queue: Vec::with_capacity(50), // 50 seems like a reasonable upper bound even for most intense chains?
         };
         env.reset(None);
@@ -240,7 +240,7 @@ impl WingspanEnv {
     }
 
     pub fn action_space_size(&self) -> Option<usize> {
-        self._action_queue.last().map(|x| x.action_space_size(&self))
+        self._action_queue.last().map(|x| x.action_space_size(self))
     }
 
     pub fn config(&self) -> &WingspanEnvConfig {
@@ -308,8 +308,8 @@ impl PyWingspanEnv {
         match slf.borrow_mut().inner.step(action_idx) {
             // Ok(x) => return Ok(Some(x)),
             // FIXME: for now returning none, so it doesn't freak out
-            Ok(x) => return Ok(Some(x)),
-            Err(WingError::InvalidAction) => return Ok(None),
+            Ok(x) => Ok(Some(x)),
+            Err(WingError::InvalidAction) => Ok(None),
             // Err(x) => return Err(x.into()),
         }
     }

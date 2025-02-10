@@ -84,7 +84,7 @@ impl Action {
                 Ok(())
             },
             Action::PlayBird | Action::PlayBirdHabitat(_) => {
-                let (bird_card, habitat, bird_idx, mut followup_actions) = env.current_player_mut().play_a_bird_card(action_idx)?;
+                let (bird_card, _habitat, _bird_idx, mut followup_actions) = env.current_player_mut().play_a_bird_card(action_idx)?;
 
                 if bird_card.color() == &BirdCardColor::White {
                     // TODO: After all (from core) of the BirdCard actions are implemented, do uncomment below
@@ -138,7 +138,7 @@ impl Action {
             },
             Action::TuckBirdCard(habitat, bird_idx) => {
                 env.current_player_mut().discard_bird_card(action_idx as usize)?;
-                env.current_player_mut().get_mat_mut().get_row_mut(&habitat).tuck_card(*bird_idx);
+                env.current_player_mut().get_mat_mut().get_row_mut(habitat).tuck_card(*bird_idx);
 
                 Ok(())
             }
@@ -221,11 +221,11 @@ impl Action {
             Action::GetFood => true,
             Action::GetFoodChoice(_) => true,
             Action::GetEgg => env.current_player().get_mat().can_place_egg(),
-            Action::LayEggAtLoc(_, _, _) => self.action_space_size(&env) > 0,
+            Action::LayEggAtLoc(_, _, _) => self.action_space_size(env) > 0,
             Action::GetBirdCard | Action::GetBirdCardFromDeck => env.current_player().get_bird_cards().len() < env.config().hand_limit.into(),
             Action::DiscardFoodOrBirdCard => Action::DiscardFood.is_performable(env) || Action::DiscardBirdCard.is_performable(env),
             Action::DiscardBirdCard | Action::TuckBirdCard(_, _) => env.current_player().can_discard_bird_card(),
-            Action::DiscardBonusCard => env.current_player().get_bonus_cards().len() > 0,
+            Action::DiscardBonusCard => !env.current_player().get_bonus_cards().is_empty(),
             Action::DiscardFood => env.current_player().can_discard_food(),
             Action::DiscardFoodChoice(choices) => {
                 let foods = env.current_player().get_foods();
@@ -363,7 +363,7 @@ impl Action {
                 | Action::MultipleActions(_)
                 | Action::ChangePlayer(_)
                 => {
-                (0..self.action_space_size(env) as u8).into_iter().collect()
+                (0..self.action_space_size(env) as u8).collect()
             },
             Action::DoThen(action, _) | Action::Option(action) => {
                 if action.is_performable(env) {

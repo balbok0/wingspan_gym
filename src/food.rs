@@ -59,9 +59,9 @@ impl From<usize> for FoodIndex {
     }
 }
 
-impl Into<u8> for FoodIndex {
-    fn into(self) -> u8 {
-        match self {
+impl From<FoodIndex> for u8 {
+    fn from(val: FoodIndex) -> Self {
+        match val {
             FoodIndex::Invertebrate => 0,
             FoodIndex::Seed => 1,
             FoodIndex::Fish => 2,

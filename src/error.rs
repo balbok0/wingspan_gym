@@ -7,10 +7,10 @@ pub enum WingError {
     InvalidAction,
 }
 
-impl Into<PyErr> for WingError {
-    fn into(self) -> PyErr {
-        match self {
-            WingError::InvalidAction => PyValueError::new_err(format!("{}", self))
+impl From<WingError> for PyErr {
+    fn from(val: WingError) -> Self {
+        match val {
+            WingError::InvalidAction => PyValueError::new_err(format!("{}", val))
         }
     }
 }

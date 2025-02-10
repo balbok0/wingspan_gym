@@ -118,14 +118,14 @@ impl BonusCard {
                         let cur_wingspan = bird.wingspan();
 
                         // Previous ref point (thus direction) is not yet known
-                        if prev_wingspan == None {
+                        if prev_wingspan.is_none() {
                             cur_chain_count += 1;
                             prev_wingspan = cur_wingspan;
                             continue;
                         }
 
                         // Wildcard wingspan. Always works
-                        if cur_wingspan == None {
+                        if cur_wingspan.is_none() {
                             cur_chain_count += 1;
                             continue;
                         }
@@ -229,7 +229,7 @@ impl BonusCard {
                     BonusCard::WetlandPopulationMonitor => Habitat::Wetland,
                     _ => panic!("wut"),
                 };
-                let mat_row = player.get_mat().get_row(&&habitat);
+                let mat_row = player.get_mat().get_row(&habitat);
 
                 // Unique standard nest types
                 let unique_types = mat_row.get_birds()
@@ -261,7 +261,7 @@ impl BonusCard {
                     BonusCard::WetlandPopulationMonitor => Habitat::Wetland,
                     _ => panic!("wut"),
                 };
-                let birds = player.get_mat().get_row(&&habitat).get_birds();
+                let birds = player.get_mat().get_row(&habitat).get_birds();
 
                 let mut longest_chain_count = 0;
 
@@ -281,7 +281,7 @@ impl BonusCard {
                         let cur_score = bird.points();
 
                         // Previous ref point (thus direction) is not yet known
-                        if prev_score == None {
+                        if prev_score.is_none() {
                             cur_chain_count += 1;
                             prev_score = Some(cur_score);
                             continue;
@@ -339,9 +339,8 @@ impl BonusCard {
                     .get_mat()
                     .rows()
                     .iter()
-                    .map(|mr| mr.get_birds())
-                    .flatten()
-                    .filter(|bc| bc.bonus_card_membership().contains(&self))
+                    .flat_map(|mr| mr.get_birds())
+                    .filter(|bc| bc.bonus_card_membership().contains(self))
                     .count()
             }
         }
@@ -377,7 +376,9 @@ mod tests {
         let wetland = env_rows[2].clone();
         let mat = PlayerMat::new_test(forest, grassland, wetland);
 
-        let player = Player::new_test(
+        
+
+        Player::new_test(
             Default::default(),
             Default::default(),
             Default::default(),
@@ -385,9 +386,7 @@ mod tests {
             mat,
             Default::default(),
             Default::default(),
-        );
-
-        player
+        )
     }
 
 

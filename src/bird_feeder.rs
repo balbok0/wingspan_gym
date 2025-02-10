@@ -7,16 +7,13 @@ fn sample_dice(rng: &mut StdRng, num_times: usize) -> Vec<u8> {
 }
 
 #[derive(Debug, Clone)]
+#[derive(Default)]
 pub struct BirdFeeder {
     dice_in_birdfeeder: Vec<u8>,
     dice_out_birdfeeder: Vec<u8>,
 }
 
-impl Default for BirdFeeder {
-    fn default() -> Self {
-        Self { dice_in_birdfeeder: Default::default(), dice_out_birdfeeder: Default::default() }
-    }
-}
+
 
 #[derive(Debug, Clone)]
 pub(crate) enum BirdFeederActionResult {
@@ -55,7 +52,7 @@ impl BirdFeeder {
 
         // Update state of env
         let result = match dice_face {
-            0 | 1 | 2 | 3 | 4 => BirdFeederActionResult::GainFood(FoodIndex::from(dice_face)),
+            0..=4 => BirdFeederActionResult::GainFood(FoodIndex::from(dice_face)),
             5 => BirdFeederActionResult::FollowupAction(Action::GetFoodChoice(Box::new([FoodIndex::Seed, FoodIndex::Invertebrate]))),
             _ => panic!("Incorrect dice face: {}", dice_face),
         };

@@ -35,7 +35,7 @@ impl DeckAndHolder {
 
         let result = match source_idx {
             0 => self._bird_deck.pop(),
-            1 | 2 | 3 => {
+            1..=3 => {
                 let display_idx = source_idx - 1;
                 if display_idx >= self._face_up_display.len() {
                     Some(self._face_up_display.remove(display_idx))

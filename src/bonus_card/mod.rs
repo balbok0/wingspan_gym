@@ -17,7 +17,7 @@ pub(crate) fn get_deck(expansions: &[Expansion]) -> Vec<BonusCard> {
         todo!("Only core is supported so far. Expansions add new logic which we have not implemented yet.")
     }
 
-    let expansions = HashSet::<Expansion>::from_iter(expansions.into_iter().cloned());
+    let expansions = HashSet::<Expansion>::from_iter(expansions.iter().cloned());
 
     BonusCard::iter()
         .filter(|bc| expansions.contains(&bc.expansion()))

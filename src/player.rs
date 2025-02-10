@@ -90,9 +90,9 @@ impl Player {
     pub fn can_play_a_bird_card(&mut self, habitats: Vec<Habitat>) -> bool {
         let mut playable_cards = vec![];
         for (idx, card) in self.bird_cards.iter().enumerate() {
-            if is_enough_food_to_play_a_card(&card, &self.foods) {
+            if is_enough_food_to_play_a_card(card, &self.foods) {
                 let mut cur_card_habitat_combos: Vec<_> = self.mat
-                    .playable_habitats(&card)
+                    .playable_habitats(card)
                     .into_iter()
                     .filter(|habitat| habitats.contains(habitat))
                     .map(|habitat| (*card, habitat, idx))
@@ -175,7 +175,7 @@ impl Player {
     }
 
     pub fn can_discard_bird_card(&self) -> bool {
-        self.bird_cards.len() > 0
+        !self.bird_cards.is_empty()
     }
 
     pub fn calculate_points(&self) -> u8 {
@@ -206,7 +206,7 @@ impl Player {
         let bonus_points: u8 = self.bonus_cards
             .iter()
             .map(|bc| {
-                let count = bc.get_count_of_matching(&self) as u8;
+                let count = bc.get_count_of_matching(self) as u8;
                 match bc.scoring_rule() {
                     crate::bonus_card::ScoringRule::Each(points_per_each) => points_per_each * count,
                     crate::bonus_card::ScoringRule::Ladder(steps) => {

@@ -32,9 +32,9 @@ impl MatRow {
 
     pub fn col_to_play(&self) -> Option<u8> {
         if self.next_col_to_play >= 5 {
-            return None;
+            None
         } else {
-            return Some(self.next_col_to_play as u8)
+            Some(self.next_col_to_play as u8)
         }
     }
 
@@ -43,12 +43,12 @@ impl MatRow {
     }
 
 
-    pub fn get_bird_actions(&self, env: &mut WingspanEnv) -> (Vec<Action>, Vec<Action>) {
-        let mut actions = vec![];
-        let mut end_of_turn_actions = vec![];
+    pub fn get_bird_actions(&self, _env: &mut WingspanEnv) -> (Vec<Action>, Vec<Action>) {
+        let actions = vec![];
+        let end_of_turn_actions = vec![];
 
         // Iterate through birds from right to left
-        for (bird_idx, bird) in self.birds.iter().enumerate().rev() {
+        for (_bird_idx, bird) in self.birds.iter().enumerate().rev() {
             if bird.color() != &BirdCardColor::Brown {
                 continue
             }
@@ -324,17 +324,17 @@ impl PlayerMat {
                 }
 
                 // Eggs are satisfied and there is a place
-                return true;
+                true
             } else {
                 // No place in a habitat
-                return false
+                false
             }
         }).cloned().collect()
     }
 
     pub fn get_actions_from_habitat_action(&self, habitat: &Habitat) -> Vec<Action> {
         let hab_action = habitat.action();
-        let hab_row = self.get_row(&habitat);
+        let hab_row = self.get_row(habitat);
 
         let mut result = vec![Action::BirdActionFromHabitat(*habitat)];
 
@@ -354,11 +354,11 @@ impl PlayerMat {
     }
 
     pub fn num_spots_to_place_eggs(&self) -> usize {
-        self.rows().map(|a| MatRow::num_spots_to_place_eggs(a)).iter().sum()
+        self.rows().map(MatRow::num_spots_to_place_eggs).iter().sum()
     }
 
     pub fn num_spots_to_discard_eggs(&self) -> usize {
-        self.rows().map(|a| MatRow::num_spots_to_discard_eggs(a)).iter().sum()
+        self.rows().map(MatRow::num_spots_to_discard_eggs).iter().sum()
     }
 
     pub fn move_bird(&mut self, bird_card: BirdCard, target_habitat: Habitat) -> WingResult<()> {

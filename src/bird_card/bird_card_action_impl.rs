@@ -4,16 +4,13 @@ use super::BirdCard;
 use crate::{action::Action, error::WingResult, food::FoodIndex, habitat::Habitat, nest::NestType, wingspan_env::WingspanEnv};
 
 #[derive(Debug)]
+#[derive(Default)]
 pub struct ActivateResult {
   pub immediate_actions: Vec<Action>,
   pub end_of_turn_actions: Vec<Action>
 }
 
-impl Default for ActivateResult {
-    fn default() -> Self {
-        Self { immediate_actions: Default::default(), end_of_turn_actions: Default::default() }
-    }
-}
+
 
 
 impl BirdCard {
@@ -672,7 +669,7 @@ impl BirdCard {
           })
           .collect();
         for (row_idx, bird_idx) in idxs {
-          let _ = env.current_player_mut().get_mat_mut().get_row_mut(&row_idx.into()).place_egg_at_exact_bird_idx(bird_idx);
+          env.current_player_mut().get_mat_mut().get_row_mut(&row_idx.into()).place_egg_at_exact_bird_idx(bird_idx);
         }
 
         Ok(Default::default())
@@ -943,7 +940,7 @@ impl BirdCard {
       Self::AmericanBittern
         | Self::CommonLoon => {
         // player(s) with the fewest birds in their [wetland] draw 1 [card].
-        let min_birds_num = (0..env.config().num_players).into_iter()
+        let min_birds_num = (0..env.config().num_players)
           .map(|idx| {
             env.get_player(idx).get_mat().get_row(&Habitat::Wetland).get_birds().len()
           })
@@ -1029,7 +1026,7 @@ impl BirdCard {
         // gain 1 [seed] from the birdfeeder, if available. you may cache it on this bird.
         if env._bird_feeder.count(FoodIndex::Seed) > 0 {
         };
-        if let Err(_) = env._bird_feeder.take_specific_food(FoodIndex::Seed) {
+        if env._bird_feeder.take_specific_food(FoodIndex::Seed).is_err() {
           // There is no food in bird feeder
           return Ok(Default::default());
         }
@@ -1504,7 +1501,7 @@ impl BirdCard {
         | Self::YellowBreastedChat => {
         // if this bird is to the right of all other birds in its habitat, move it to another habitat.
         if env.current_player().get_mat().get_row(habitat).get_birds().len() == bird_idx + 1 {
-          let other_habitats: Vec<_> = self.habitats().into_iter().filter(|card_hab| card_hab != &habitat).cloned().collect();
+          let other_habitats: Vec<_> = self.habitats().iter().filter(|card_hab| card_hab != &habitat).cloned().collect();
           Ok(ActivateResult {
             immediate_actions: vec![Action::MoveBird(*self, other_habitats)],
             ..Default::default()
