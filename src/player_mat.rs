@@ -227,6 +227,8 @@ impl MatRow {
 
 #[cfg(test)]
 impl MatRow {
+
+    #[allow(clippy::too_many_arguments)]
     pub fn new_test(
         habitat: Habitat,
         bird_col_idxs: Vec<usize>,

@@ -138,14 +138,12 @@ impl BonusCard {
                             ChainState::Unknown => {
                                 cur_chain_count += 1;
                                 prev_wingspan = cur_wingspan;
-                                if prev_known_wingspan > cur_known_wingspan {
-                                    chain_dir = ChainState::Decreasing;
-                                } else if prev_known_wingspan < cur_known_wingspan {
-                                    chain_dir = ChainState::Increasing;
-                                } else {
+                                chain_dir = match prev_known_wingspan.cmp(&cur_known_wingspan) {
+                                    std::cmp::Ordering::Greater => ChainState::Decreasing,
+                                    std::cmp::Ordering::Less => ChainState::Increasing,
                                     // They got the same wingspan
-                                    chain_dir = ChainState::Unknown;
-                                }
+                                    std::cmp::Ordering::Equal => ChainState::Unknown,
+                                };
                             },
                             ChainState::Decreasing => {
                                 if prev_known_wingspan >= cur_known_wingspan {
@@ -179,13 +177,7 @@ impl BonusCard {
                         let unique_types = mat_row.get_birds()
                             .iter()
                             .map(|b| b.nest_type())
-                            .filter_map(|nt| {
-                                if nt == &NestType::Wild || nt == &NestType::Wild {
-                                    None
-                                } else {
-                                    Some(nt)
-                                }
-                            })
+                            .filter(|nt| !(nt == &&NestType::None || nt == &&NestType::Wild))
                             .unique()
                             .count();
                         // star nest types
@@ -235,13 +227,7 @@ impl BonusCard {
                 let unique_types = mat_row.get_birds()
                     .iter()
                     .map(|b| b.nest_type())
-                    .filter_map(|nt| {
-                        if nt == &NestType::Wild || nt == &NestType::Wild {
-                            None
-                        } else {
-                            Some(nt)
-                        }
-                    })
+                    .filter(|nt| !(nt == &&NestType::None || nt == &&NestType::Wild))
                     .unique()
                     .count();
 
@@ -292,15 +278,15 @@ impl BonusCard {
                             ChainState::Unknown => {
                                 cur_chain_count += 1;
 
-                                if prev_known_score > cur_score {
-                                    chain_dir = ChainState::Decreasing;
-                                } else if prev_known_score < cur_score {
-                                    chain_dir = ChainState::Increasing;
-                                } else {
-                                    // They got the same points score
-                                    // This is a breaking condition for rangers
-                                    break;
-                                }
+                                chain_dir = match prev_known_score.cmp(&cur_score) {
+                                    std::cmp::Ordering::Greater => ChainState::Decreasing,
+                                    std::cmp::Ordering::Less => ChainState::Increasing,
+                                    std::cmp::Ordering::Equal => {
+                                        // They got the same points score
+                                        // This is a breaking condition for rangers
+                                        break;
+                                    }
+                                };
                             },
                             ChainState::Decreasing => {
                                 if prev_known_score > cur_score {
@@ -376,7 +362,7 @@ mod tests {
         let wetland = env_rows[2].clone();
         let mat = PlayerMat::new_test(forest, grassland, wetland);
 
-        
+
 
         Player::new_test(
             Default::default(),

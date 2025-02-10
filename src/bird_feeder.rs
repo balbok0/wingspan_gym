@@ -30,20 +30,22 @@ impl BirdFeeder {
     pub fn take_dice_and_update_state(&mut self, rng: &mut StdRng, idx: u8) -> WingResult<BirdFeederActionResult> {
         let idx = idx as usize;
 
-        if idx == self.dice_in_birdfeeder.len() {
-            // Action equal to size of bird-feeder is a re-roll
-            if self.can_reroll() {
-                // Reroll is valid. Do it
-                self.reroll(rng);
+        match idx.cmp(&self.dice_in_birdfeeder.len()) {
+            std::cmp::Ordering::Less => {},
+            std::cmp::Ordering::Equal => {
+                // Action equal to size of bird-feeder is a re-roll
+                if self.can_reroll() {
+                    // Reroll is valid. Do it
+                    self.reroll(rng);
 
-                // Player still should get food after re-roll
-                return Ok(BirdFeederActionResult::FollowupAction(Action::GetFood));
-            } else {
-                // Reroll is not valid. This is not a performable action
-                return Err(WingError::InvalidAction);
-            }
-        } else if idx > self.dice_in_birdfeeder.len() {
-            return Err(WingError::InvalidAction);
+                    // Player still should get food after re-roll
+                    return Ok(BirdFeederActionResult::FollowupAction(Action::GetFood));
+                } else {
+                    // Reroll is not valid. This is not a performable action
+                    return Err(WingError::InvalidAction);
+                }
+            },
+            std::cmp::Ordering::Greater => return Err(WingError::InvalidAction),
         }
 
         // Update dice in bird feeder
@@ -97,6 +99,7 @@ impl BirdFeeder {
         self.dice_in_birdfeeder.len()
     }
 
+    #[allow(dead_code)]
     pub fn num_dice_out(&self) -> usize {
         self.dice_out_birdfeeder.len()
     }

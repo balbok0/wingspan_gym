@@ -5,6 +5,7 @@ use pyo3::prelude::*;
 #[derive(Debug, Clone)]
 pub enum Action {
     // First decision of the turn (i.e. play a bird, forest, grassland, wetland)
+    #[allow(clippy::enum_variant_names)]
     ChooseAction,
     BirdActionFromHabitat(Habitat),
 
