@@ -1,0 +1,53 @@
+# name: Release
+
+# on:
+#   release: {}
+
+
+# jobs:
+#   build-sdist:
+#     name: build sdist
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v4
+#       - uses: actions/setup-python@v5
+#         with:
+#           python-version: '3.12'
+
+#       - uses: PyO3/maturin-action@v1
+#         with:
+#           command: sdist
+#           args: --out dist
+#           rust-toolchain: stable
+
+#       - uses: actions/upload-artifact@v4
+#         with:
+#           name: pypi_files_sdist
+#           path: dist
+
+
+#   linux:
+#     runs-on: ubuntu-latest
+#     strategy:
+#       matrix:
+#         target: [x86_64]
+#     steps:
+#     - uses: actions/checkout@v3
+#     - uses: actions/setup-python@v4
+#       with:
+#         python-version: '3.12'
+#         architecture: x64
+
+#     - name: Build wheels
+#       uses: PyO3/maturin-action@v1
+#       with:
+#         rust-toolchain: stable
+#         target: ${{ matrix.target }}
+#         manylinux: auto
+#         args: --release --out dist -i 3.7 3.8 3.9 3.10 3.11 3.12
+
+#     - name: Upload wheels
+#       uses: actions/upload-artifact@v3
+#       with:
+#         name: wheels
+#         path: dist
