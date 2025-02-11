@@ -5,11 +5,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 dynamic = ["version"]
 dependencies = [
-    "fastexcel",
     "gymnasium>=1.0.0",
-    "jaxtyping>=0.2.36",
-    "maturin>=1.8.1",
-    "polars>=1.20",
 ]
 classifiers = [
     "Programming Language :: Rust",
@@ -19,7 +15,11 @@ classifiers = [
 
 [dependency-groups]
 dev = [
+    "fastexcel",
+    "maturin>=1.8.1",
     "pytest",
+    "polars>=1.20",
+    "pre-commit>=4.1.0",
     "unidecode>=1.3.8",
 ]
 lint = ["ruff"]
@@ -32,3 +32,7 @@ build-backend = "maturin"
 features = ["pyo3/extension-module"]
 python-source = "python"
 module-name = "wingspan_gym._internal"
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
