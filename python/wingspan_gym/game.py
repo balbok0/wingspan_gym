@@ -1,3 +1,5 @@
+"""Main module containing Wingspan Environment."""
+
 from typing import Optional
 
 import gymnasium as gym
@@ -6,7 +8,7 @@ from ._internal import PyWingspanEnv
 
 class WingspanEnv(gym.Env):
     def __init__(self):
-        """gym Environment that represts a game of Wingspan.
+        """gym Environment representing a game of Wingspan.
 
         It is single-threaded, but efficient offloading vast majority of operations to native implementation.
         """
@@ -19,6 +21,10 @@ class WingspanEnv(gym.Env):
         # self.action_space = gym.spaces.Discrete(max(15, self.config.hand_limit)))
 
     def reset(self, *, seed: Optional[int] = None):  # pyright: ignore[reportIncompatibleMethodOverride]
+        """Resets environment to initial state.
+
+        If specified, seed can be used for reproducibility.
+        """
         assert seed is None or seed >= 0
         self._inner.reset(seed)
 

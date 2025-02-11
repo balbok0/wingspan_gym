@@ -78,15 +78,15 @@ class PyWingspanEnv:
         ...
 
 class StepResult(Enum):
+    """Internal enum describing result of the action."""
+
     Live = 0
     Terminated = 1
     Invalid = 2
 
 class PyAction:
-    def __str__(self) -> str:
-        """String representation of this PyAction.
+    """A type of action that can be performed."""
 
-        Returns:
-            str: _description_
-        """
+    def __str__(self) -> str:
+        """String representation of this PyAction."""
         ...
