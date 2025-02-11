@@ -1,0 +1,34 @@
+site_name: Wingspan Env
+site_url: https://mydomain.org/mysite
+
+plugins:
+  - search
+  - gen-files:
+      scripts:
+        - .scripts/docs/gen_ref_pages.py
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [python/]
+          options:
+            allow_inspection: true
+            merge_init_into_class: true
+            show_source: false
+  - mkdocs-jupyter
+
+theme:
+  name: material
+  palette:
+    primary: light blue
+  features:
+    - content.code.copy
+
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
