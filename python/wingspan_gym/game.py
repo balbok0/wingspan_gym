@@ -1,24 +1,31 @@
+from typing import Optional
+
 import gymnasium as gym
 from ._internal import PyWingspanEnv
 
 
 class WingspanEnv(gym.Env):
     def __init__(self):
+        """gym Environment that represts a game of Wingspan.
+
+        It is single-threaded, but efficient offloading vast majority of operations to native implementation.
+        """
         self._inner = PyWingspanEnv()
 
         # The biggest action space possible occurs when player needs to choose a card from their hand
         # or place an egg on a mat (15 choices max)
-        self.action_space = gym.spaces.Discrete(15)
-        # self.action_space = gym.spaces.Discrete(max(15, self.config.hand_limit))
+        # TODO: Make this into a valid check like the one commented below
+        self.action_space = gym.spaces.Discrete(20)
+        # self.action_space = gym.spaces.Discrete(max(15, self.config.hand_limit)))
 
-    def reset(self, *, seed: int = None):
+    def reset(self, *, seed: Optional[int] = None):  # pyright: ignore[reportIncompatibleMethodOverride]
         assert seed is None or seed >= 0
         self._inner.reset(seed)
 
-    def step(self, action_idx: int):
-        return self._inner.step(action_idx)
+    def step(self, action: int):  # pyright: ignore[reportIncompatibleMethodOverride]
+        return self._inner.step(action)
 
-    def action_space_size(self) -> int:
+    def action_space_size(self) -> int | None:
         return self._inner.action_space_size()
 
     def cur_player(self) -> int:

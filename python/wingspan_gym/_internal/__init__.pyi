@@ -1,9 +1,10 @@
 from enum import Enum
 from typing import Optional
 
-
 class PyWingspanEnv:
-    def __init__(self, hand_limit: Optional[int] = None, num_players: Optional[int] = None):
+    def __init__(
+        self, hand_limit: Optional[int] = None, num_players: Optional[int] = None
+    ):
         """
         Initializes environment with specified number of players.
         Additionally it enforces hand limit, which in turn can limits size of action space.
@@ -76,12 +77,10 @@ class PyWingspanEnv:
         """
         ...
 
-
 class StepResult(Enum):
     Live = 0
     Terminated = 1
     Invalid = 2
-
 
 class PyAction:
     def __str__(self) -> str:

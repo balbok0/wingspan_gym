@@ -5,6 +5,7 @@ import random
 
 import wingspan_gym.game
 
+
 class DummyHeuristic:
     def __init__(self, env: wingspan_gym.game.WingspanEnv):
         self.env = env
@@ -30,6 +31,7 @@ class DummyHeuristic:
 
         return random.randint(0, self.env.action_space_size())
 
+
 env = wingspan_gym.game.WingspanEnv()
 
 env.reset()
@@ -53,4 +55,3 @@ while not episode_over and step_idx < max_steps:
         break
 
 env.close()
-
