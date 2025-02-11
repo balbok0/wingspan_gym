@@ -1,6 +1,5 @@
 import wingspan_gym
 from wingspan_gym._internal import StepResult
-import gymnasium
 import random
 
 import wingspan_gym.game

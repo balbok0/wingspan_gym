@@ -25,8 +25,11 @@ class WingspanEnv(gym.Env):
     def step(self, action: int):  # pyright: ignore[reportIncompatibleMethodOverride]
         return self._inner.step(action)
 
-    def action_space_size(self) -> int | None:
-        return self._inner.action_space_size()
+    def action_space_size(self) -> int:
+        inner_result = self._inner.action_space_size()
+        if inner_result is None:
+            raise ValueError("Action space is non-existent in terminated state")
+        return inner_result
 
     def cur_player(self) -> int:
         return self._inner.player_idx
