@@ -34,18 +34,18 @@ pub(crate) fn is_enough_food_to_play_a_card(card: &BirdCard, player_food: &Foods
 
     match is_cost_alt {
         crate::food::CostAlternative::Yes => {
-            food_req.iter().zip(player_food).map(
+            food_req.iter().zip(player_food).all(
                 |(req, res)| {
                     req.map_or(false, |req| req <= *res)
                 }
-            ).any(|b| b)
+            )
         },
         crate::food::CostAlternative::No => {
-            food_req.iter().zip(player_food).map(
+            food_req.iter().zip(player_food).all(
                 |(req, res)| {
                     req.map_or(true, |req| req <= *res)
                 }
-            ).all(|b| b)
+            )
         }
     }
 }
