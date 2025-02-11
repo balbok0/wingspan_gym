@@ -10,6 +10,10 @@ wheels/
 .venv
 
 
+# mkdocs
+site/
+public/
+
 /target
 
 # Byte-compiled / optimized / DLL files
