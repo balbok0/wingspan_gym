@@ -14,17 +14,49 @@ plugins:
             allow_inspection: true
             merge_init_into_class: true
             show_source: false
-  - mkdocs-jupyter
+  - mkdocs-jupyter:
+      # execute: true
 
 theme:
   name: material
   palette:
-    primary: light blue
+
+    # Palette toggle for automatic mode
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: light blue
+      accent: purple
+
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: light blue
+      accent: purple
+
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference
   features:
     - content.code.copy
 
 
 markdown_extensions:
+  - admonition
+  - attr_list
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - pymdownx.highlight:
       anchor_linenums: true
       line_spans: __span
