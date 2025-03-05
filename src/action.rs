@@ -14,7 +14,7 @@ pub enum Action {
 
     // Get resource actions
     GetFood,
-    GetFoodChoice(Box<[FoodIndex]>),
+    GetFoodFromSupplyChoice(Box<[FoodIndex]>),
     GetEgg,
     GetEggAtLoc(Habitat, usize, usize),
     GetEggChoice(Box<[(Habitat, usize)]>),
@@ -101,13 +101,13 @@ impl Action {
                 Ok(())
             },
             Action::GetFood => {
-                match env._bird_feeder.take_dice_and_update_state(&mut env.rng, action_idx)? {
+                match env._bird_feeder.take_dice_and_update_state(&mut env.rng, action_idx, self.clone())? {
                     crate::bird_feeder::BirdFeederActionResult::GainFood(food_idx) => env.current_player_mut().add_food(food_idx, 1),
                     crate::bird_feeder::BirdFeederActionResult::FollowupAction(action) => env.push_action(action),
                 }
                 Ok(())
             },
-            Action::GetFoodChoice(choices) => {
+            Action::GetFoodFromSupplyChoice(choices) => {
                 let action_idx = action_idx as usize;
                 if action_idx >= choices.len() {
                     Err(WingError::InvalidAction)
@@ -248,7 +248,7 @@ impl Action {
             Action::PlayBird => env.current_player_mut().can_play_a_bird_card(vec![Habitat::Forest, Habitat::Grassland, Habitat::Wetland]),
             Action::PlayBirdHabitat(habitat) => env.current_player_mut().can_play_a_bird_card(vec![*habitat]),
             Action::GetFood => true,
-            Action::GetFoodChoice(_) => true,
+            Action::GetFoodFromSupplyChoice(_) => true,
             Action::GetEgg => env.current_player().get_mat().can_place_egg(),
             Action::GetEggAtLoc(_, _, _) => self.action_space_size(env) > 0,
             Action::GetEggChoice(_) => self.valid_actions(env).len() > 0,
@@ -291,7 +291,7 @@ impl Action {
                 env.current_player().get_playable_card_hab_combos().len()
             },
             Action::GetFood => env._bird_feeder.num_actions(),
-            Action::GetFoodChoice(choices) => choices.len(),
+            Action::GetFoodFromSupplyChoice(choices) => choices.len(),
             Action::GetEgg => env.current_player().get_mat().num_spots_to_place_eggs(),
             Action::GetEggAtLoc(habitat, bird_idx, _) => {
                 let mat_row = env.current_player().get_mat().get_row(habitat);
@@ -407,7 +407,7 @@ impl Action {
             Action::PlayBird
                 | Action::PlayBirdHabitat(_)
                 | Action::GetFood
-                | Action::GetFoodChoice(_)
+                | Action::GetFoodFromSupplyChoice(_)
                 | Action::GetEgg
                 | Action::GetBirdCard
                 | Action::GetBirdCardFromDeck

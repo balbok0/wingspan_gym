@@ -27,7 +27,7 @@ impl BirdFeeder {
         self.dice_in_birdfeeder = sample_dice(rng, 5);
     }
 
-    pub fn take_dice_and_update_state(&mut self, rng: &mut StdRng, idx: u8) -> WingResult<BirdFeederActionResult> {
+    pub fn take_dice_and_update_state(&mut self, rng: &mut StdRng, idx: u8, action: Action) -> WingResult<BirdFeederActionResult> {
         let idx = idx as usize;
 
         match idx.cmp(&self.dice_in_birdfeeder.len()) {
@@ -39,7 +39,7 @@ impl BirdFeeder {
                     self.reroll(rng);
 
                     // Player still should get food after re-roll
-                    return Ok(BirdFeederActionResult::FollowupAction(Action::GetFood));
+                    return Ok(BirdFeederActionResult::FollowupAction(action));
                 } else {
                     // Reroll is not valid. This is not a performable action
                     return Err(WingError::InvalidAction);
@@ -55,7 +55,7 @@ impl BirdFeeder {
         // Update state of env
         let result = match dice_face {
             0..=4 => BirdFeederActionResult::GainFood(FoodIndex::from(dice_face)),
-            5 => BirdFeederActionResult::FollowupAction(Action::GetFoodChoice(Box::new([FoodIndex::Seed, FoodIndex::Invertebrate]))),
+            5 => BirdFeederActionResult::FollowupAction(Action::GetFoodFromSupplyChoice(Box::new([FoodIndex::Seed, FoodIndex::Invertebrate]))),
             _ => panic!("Incorrect dice face: {}", dice_face),
         };
 

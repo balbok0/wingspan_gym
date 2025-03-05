@@ -346,7 +346,7 @@ impl BirdCard {
           _ => return Err(WingError::InvalidBird(format!("Got {self:?} in unexpected arm")))
         };
         Ok(ActivateResult {
-          immediate_actions: vec![Action::DoThen(Box::new(Action::TuckBirdCard(*habitat, bird_idx)), Box::new(Action::GetFoodChoice(food_choices)))],
+          immediate_actions: vec![Action::DoThen(Box::new(Action::TuckBirdCard(*habitat, bird_idx)), Box::new(Action::GetFoodFromSupplyChoice(food_choices)))],
           ..Default::default()
         })
       },
@@ -1143,7 +1143,7 @@ impl BirdCard {
 
         if has_seed && has_fruit {
           return Ok(ActivateResult {
-            immediate_actions: vec![Action::GetFoodChoice(Box::new([FoodIndex::Seed, FoodIndex::Fruit]))],
+            immediate_actions: vec![Action::GetFoodFromSupplyChoice(Box::new([FoodIndex::Seed, FoodIndex::Fruit]))],
             ..Default::default()
           });
         }
@@ -1515,7 +1515,7 @@ impl BirdCard {
         Ok(ActivateResult {
           immediate_actions: vec![Action::DoThen(
               Box::new(Action::DiscardFood),
-              Box::new(Action::GetFoodChoice(FoodIndex::iter().collect::<Box<[FoodIndex]>>()))
+              Box::new(Action::GetFoodFromSupplyChoice(FoodIndex::iter().collect::<Box<[FoodIndex]>>()))
             )],
           ..Default::default()
         })
@@ -1566,7 +1566,7 @@ impl BirdCard {
         }
 
         Ok(ActivateResult{
-          immediate_actions: vec![Action::GetFoodChoice(v.into_boxed_slice())],
+          immediate_actions: vec![Action::GetFoodFromSupplyChoice(v.into_boxed_slice())],
           ..Default::default()
         })
       },
