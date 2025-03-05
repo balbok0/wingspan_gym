@@ -2,7 +2,7 @@ use crate::{bird_card::{BirdCard, BirdCardColor}, error::{WingError, WingResult}
 use pyo3::prelude::*;
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Action {
     // First decision of the turn (i.e. play a bird, forest, grassland, wetland)
     #[allow(clippy::enum_variant_names)]
@@ -16,7 +16,8 @@ pub enum Action {
     GetFood,
     GetFoodChoice(Box<[FoodIndex]>),
     GetEgg,
-    LayEggAtLoc(Habitat, usize, usize),
+    GetEggAtLoc(Habitat, usize, usize),
+    GetEggChoice(Box<[(Habitat, usize)]>),
     GetBirdCard,
     GetBirdCardFromDeck,
 
@@ -24,10 +25,12 @@ pub enum Action {
     DiscardFoodOrBirdCard,
     DiscardBirdCard,
     TuckBirdCard(Habitat, usize),
+    TuckBirdCardFromDeck(Habitat, usize),
     DiscardBonusCard,
     DiscardFood,
     DiscardFoodChoice(Box<[(FoodIndex, u8)]>), // Discard food of choice N times
     DiscardEgg,
+    DiscardEggChoice(Box<[(Habitat, usize)]>),
     // Cache food of choice N times on specific bird.
     CacheFoodChoice(Box<[(FoodIndex, u8)]>, Habitat, usize),
 
@@ -114,12 +117,23 @@ impl Action {
                 }
             },
             Action::GetEgg => env.current_player_mut().get_mat_mut().place_egg(action_idx),
-            Action::LayEggAtLoc(habitat, bird_idx, num_eggs) => {
+            Action::GetEggAtLoc(habitat, bird_idx, num_eggs) => {
                 for _ in 0..*num_eggs {
-                    env.current_player_mut().get_mat_mut().get_row_mut(habitat).place_egg_at_exact_bird_idx(*bird_idx);
+                    // Ignore errors, since some eggs might have succeeded. If user makes bad moves let them
+                    let _ = env.current_player_mut().get_mat_mut().get_row_mut(habitat).place_egg_at_exact_bird_idx(*bird_idx);
                 }
 
                 Ok(())
+            },
+            Action::GetEggChoice(choices) => {
+                let action_idx = action_idx as usize;
+                if action_idx >= choices.len() {
+                    Err(WingError::InvalidAction)
+                } else {
+                    let (habitat, bird_idx) = choices[action_idx];
+                    // TODO: Potentially check here if needed.
+                    env.current_player_mut().get_mat_mut().get_row_mut(&habitat).place_egg_at_exact_bird_idx(bird_idx)
+                }
             },
             Action::GetBirdCard => {
                 let card = env._bird_deck.draw_card(action_idx)?;
@@ -142,6 +156,11 @@ impl Action {
                 env.current_player_mut().get_mat_mut().get_row_mut(habitat).tuck_card(*bird_idx);
 
                 Ok(())
+            },
+            Action::TuckBirdCardFromDeck(habitat, bird_idx) => {
+                env.current_player_mut().get_mat_mut().get_row_mut(habitat).tuck_card(*bird_idx);
+
+                Ok(())
             }
             Action::DiscardBonusCard => {
                 env.current_player_mut().discard_bonus_card(action_idx as usize)
@@ -158,6 +177,15 @@ impl Action {
                 env.current_player_mut().discard_food(*food_idx, *num_food)
             },
             Action::DiscardEgg => env.current_player_mut().get_mat_mut().discard_egg(action_idx),
+            Action::DiscardEggChoice(choices) => {
+                let action_idx = action_idx as usize;
+                if action_idx >= choices.len() {
+                    Err(WingError::InvalidAction)
+                } else {
+                    let (habitat, bird_idx) = choices[action_idx];
+                    env.current_player_mut().get_mat_mut().get_row_mut(&habitat).discard_egg_at_exact_bird_idx(bird_idx)
+                }
+            },
             Action::CacheFoodChoice(foods, habitat, bird_idx) => {
                 let (food_index, num_food) = foods.get(action_idx as usize).ok_or(WingError::InvalidAction)?;
                 let row = env.current_player_mut().get_mat_mut().get_row_mut(habitat);
@@ -222,7 +250,8 @@ impl Action {
             Action::GetFood => true,
             Action::GetFoodChoice(_) => true,
             Action::GetEgg => env.current_player().get_mat().can_place_egg(),
-            Action::LayEggAtLoc(_, _, _) => self.action_space_size(env) > 0,
+            Action::GetEggAtLoc(_, _, _) => self.action_space_size(env) > 0,
+            Action::GetEggChoice(_) => self.valid_actions(env).len() > 0,
             Action::GetBirdCard | Action::GetBirdCardFromDeck => env.current_player().get_bird_cards().len() < env.config().hand_limit.into(),
             Action::DiscardFoodOrBirdCard => Action::DiscardFood.is_performable(env) || Action::DiscardBirdCard.is_performable(env),
             Action::DiscardBirdCard | Action::TuckBirdCard(_, _) => env.current_player().can_discard_bird_card(),
@@ -237,6 +266,8 @@ impl Action {
                     .unwrap_or(true)
             },
             Action::DiscardEgg => env.current_player().get_mat().can_discard_egg(),
+            Action::DiscardEggChoice(_) => self.valid_actions(env).len() > 0,
+            Action::TuckBirdCardFromDeck(_, _) => true,
             Action::CacheFoodChoice(_, _, _) => true,
             Action::MoveBird(_, _) => {
                 self.action_space_size(env) > 0
@@ -262,7 +293,7 @@ impl Action {
             Action::GetFood => env._bird_feeder.num_actions(),
             Action::GetFoodChoice(choices) => choices.len(),
             Action::GetEgg => env.current_player().get_mat().num_spots_to_place_eggs(),
-            Action::LayEggAtLoc(habitat, bird_idx, _) => {
+            Action::GetEggAtLoc(habitat, bird_idx, _) => {
                 let mat_row = env.current_player().get_mat().get_row(habitat);
                 let bird_idx = *bird_idx;
 
@@ -271,7 +302,8 @@ impl Action {
                 } else {
                     0
                 }
-            }
+            },
+            Action::GetEggChoice(choices) => choices.len(),
             Action::GetBirdCard => env._bird_deck.num_actions(),
             Action::GetBirdCardFromDeck => 1,
             Action::DiscardFoodOrBirdCard => {
@@ -279,11 +311,13 @@ impl Action {
             },
             Action::DiscardBirdCard | Action::TuckBirdCard(_, _) => {
                 env.current_player().get_bird_cards().len()
-            }
+            },
             Action::DiscardBonusCard => env.current_player().get_bonus_cards().len(),
+            Action::TuckBirdCardFromDeck(_, _) => 1,
             Action::DiscardFood => 5,
             Action::DiscardFoodChoice(choices) => choices.len(),
             Action::DiscardEgg => env.current_player().get_mat().num_spots_to_discard_eggs(),
+            Action::DiscardEggChoice(choices) => choices.len(),
             Action::CacheFoodChoice(food_choices, _, _) => food_choices.len(),
             Action::MoveBird(bird_card, habitats) => {
                 env.current_player().get_mat().playable_habitats(bird_card)
@@ -345,6 +379,28 @@ impl Action {
                     })
                     .collect()
             },
+            Action::GetEggChoice(choices) => {
+                choices.iter().enumerate()
+                    .filter_map(|(choice_idx, (habitat, bird_idx ))| {
+                        if env.current_player().get_mat().get_row(habitat).can_place_egg(*bird_idx) {
+                            Some(choice_idx as u8)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect()
+            },
+            Action::DiscardEggChoice(choices) => {
+                choices.iter().enumerate()
+                    .filter_map(|(choice_idx, (habitat, bird_idx ))| {
+                        if env.current_player().get_mat().get_row(habitat).can_discard_egg(*bird_idx) {
+                            Some(choice_idx as u8)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect()
+            },
             Action::MoveBird(_, habs) => {
                 (0..habs.len() as u8).collect()
             }
@@ -357,7 +413,8 @@ impl Action {
                 | Action::GetBirdCardFromDeck
                 | Action::DiscardBirdCard
                 | Action::TuckBirdCard(_, _)
-                | Action::LayEggAtLoc(_, _, _)
+                | Action::TuckBirdCardFromDeck(_, _)
+                | Action::GetEggAtLoc(_, _, _)
                 | Action::DiscardBonusCard
                 | Action::DiscardEgg
                 | Action::CacheFoodChoice(_, _, _)

@@ -7,6 +7,7 @@ pub mod bird_card;
 pub mod wingspan_env;
 
 mod action;
+mod bird_card_callback;
 mod bird_feeder;
 mod bonus_card;
 mod deck_and_holder;

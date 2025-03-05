@@ -1,7 +1,9 @@
+use std::thread::current;
+
 use strum::IntoEnumIterator;
 
 use super::BirdCard;
-use crate::{action::Action, error::WingResult, food::FoodIndex, habitat::Habitat, nest::NestType, wingspan_env::WingspanEnv};
+use crate::{action::Action, bird_card_callback::BirdCardCallback, error::{WingError, WingResult}, food::FoodIndex, habitat::Habitat, nest::NestType, wingspan_env::WingspanEnv};
 
 #[derive(Debug)]
 #[derive(Default)]
@@ -37,10 +39,6 @@ impl BirdCard {
         // remove any 1 [die] from the birdfeeder, then gain 1 [seed] from the supply.
         todo!()
       },
-      Self::CedarWaxwing => {
-        // tuck 1 [card] from your hand behind this bird. if you do, gain 1 [fruit] from the supply.
-        todo!()
-      },
       Self::VerditerFlycatcher => {
         // if you have gained a [invertebrate] from the birdfeeder on this turn, gain 1 [fruit] from the supply.
         todo!()
@@ -73,13 +71,9 @@ impl BirdCard {
         | Self::YellowHeadedBlackbird => {
         // tuck 1 [card] from your hand behind this bird. if you do, you may also lay 1 [egg] on this bird.
         Ok(ActivateResult{
-          immediate_actions: vec![Action::DoThen(Box::new(Action::TuckBirdCard(*habitat, bird_idx)), Box::new(Action::LayEggAtLoc(*habitat, bird_idx, 1)))],
+          immediate_actions: vec![Action::DoThen(Box::new(Action::TuckBirdCard(*habitat, bird_idx)), Box::new(Action::GetEggAtLoc(*habitat, bird_idx, 1)))],
           ..Default::default()
         })
-      },
-      Self::PileatedWoodpecker => {
-        // all players lay 1 [egg] on any 1 [cavity] bird. you may lay 1 [egg] on 1 additional [cavity] bird.
-        todo!()
       },
       Self::AmericanRedstart
         | Self::WhiteBackedWoodpecker => {
@@ -98,10 +92,6 @@ impl BirdCard {
         // choose 1-5 birds in this habitat. tuck 1 [card] from your hand behind each.
         todo!()
       },
-      Self::AustralianOwletNightjar => {
-        // when another player takes the "gain food" action, gain 1 [invertebrate] from the birdfeeder, if there is one, at the end of their turn.
-        todo!()
-      },
       Self::LaughingKookaburra => {
         // reset the birdfeeder. if you do, gain 1 [invertebrate], [fish], or [rodent], if there is one.
         todo!()
@@ -110,30 +100,12 @@ impl BirdCard {
         // choose 1 other player. for each action cube on their [grassland], lay 1 [egg] on this bird.
         todo!()
       },
-      Self::SacredKingfisher => {
-        // when another player takes the "gain food" action, gain 1 [invertebrate], [fish], or [rodent] from the birdfeeder, if there is one, at the end of their turn.
-        todo!()
-      },
-      Self::PygmyNuthatch => {
-        // tuck 1 [card] from your hand behind this bird. if you do, gain 1 [invertebrate] or [seed] from the supply.
-        todo!()
-      },
       Self::FireFrontedSerin => {
         // lay 1 [egg] on this bird for each bird to its left in this row.
         todo!()
       },
-      Self::BronzedCowbird
-        | Self::BrownHeadedCowbird
-        | Self::YellowBilledCuckoo => {
-        // when another player takes the "lay eggs" action, lay 1 [egg] on a bird with a [bowl] nest.
-        todo!()
-      },
       Self::LesserFrigatebird => {
         // all players may discard 1 [egg] from a [wetland] bird. each player that discards an [egg] gains 1 [wild] from the supply.
-        todo!()
-      },
-      Self::HornedLark => {
-        // when another player plays a bird in their [grassland], tuck 1 [card] from your hand behind this bird.
         todo!()
       },
       Self::CaliforniaQuail
@@ -158,10 +130,6 @@ impl BirdCard {
       },
       Self::BlueRockThrush => {
         // if this bird has no birds to the right of it, you may move it (only the card) to the player mat of the player on your left (you choose its habitat). if you do, draw 3 [card].
-        todo!()
-      },
-      Self::EasternKingbird => {
-        // when another player plays a bird in their [forest], gain 1 [invertebrate] from the supply.
         todo!()
       },
       Self::ManedDuck => {
@@ -279,7 +247,11 @@ impl BirdCard {
       },
       Self::Brant => {
         // draw the 3 face-up [card] in the bird tray.
-        todo!()
+        for bird_card in env._bird_deck.get_display_cards().clone() {
+          env.current_player_mut().add_bird_card(bird_card);
+        }
+        env._bird_deck.reset_display();
+        Ok(Default::default())
       },
       Self::MaskedLapwing => {
         // reset the birdfeeder, then, for each type of food in the birdfeeder, gain 1 of that type.
@@ -327,10 +299,6 @@ impl BirdCard {
         // steal 1 [rodent] from another player's supply and cache it on this bird. they gain 1 [die] from the birdfeeder.
         todo!()
       },
-      Self::EurasianTreeSparrow => {
-        // when another player takes the "gain food" action, gain 1 [seed] from the birdfeeder at the end of their turn.
-        todo!()
-      },
       Self::NorthIslandBrownKiwi => {
         // discard a bonus card. if you do, draw 4 bonus cards, keep 2, and discard the other 2.
         todo!()
@@ -338,23 +306,6 @@ impl BirdCard {
       Self::TawnyFrogmouth => {
         // reset the birdfeeder. cache 1 [invertebrate] or [rodent] from the birdfeeder (if available) on this bird.
         todo!()
-      },
-      Self::BlackWoodpecker
-        | Self::NorthernFlicker => {
-        // gain all [invertebrate] that are in the birdfeeder.
-        todo!()
-      },
-      Self::VauxsSwift => {
-        // tuck 1 [card] from your hand behind this bird. if you do, gain 1 [invertebrate] from the supply.
-        Ok(ActivateResult {
-          immediate_actions: vec![
-            Action::DoThen(
-              Box::new(Action::TuckBirdCard(*habitat, bird_idx)),
-              Box::new(Action::GetFoodChoice(Box::new([FoodIndex::Invertebrate])))
-            )
-          ],
-          ..Default::default()
-        })
       },
       Self::BlackShoulderedKite => {
         // reset the birdfeeder and gain 1 [rodent], if there is one. you may give it to another player; if you do, lay up to 3 [egg] on this bird.
@@ -380,10 +331,22 @@ impl BirdCard {
         })
       },
       Self::DarkEyedJunco
-        | Self::PineSiskin => {
-        // tuck 1 [card] from your hand behind this bird. if you do, gain 1 [seed] from the supply.
+        | Self::PineSiskin
+        | Self::VauxsSwift
+        | Self::CedarWaxwing
+        | Self::PygmyNuthatch
+        => {
+        // tuck 1 [card] from your hand behind this bird. if you do, gain 1 [FOOD TYPE] from the supply.
+        let food_choices: Box<[FoodIndex]> = match self {
+          Self::DarkEyedJunco
+            | Self::PineSiskin => Box::new([FoodIndex::Seed]),
+          Self::VauxsSwift => Box::new([FoodIndex::Invertebrate]),
+          Self::CedarWaxwing => Box::new([FoodIndex::Fruit]),
+          Self::PygmyNuthatch => Box::new([FoodIndex::Invertebrate, FoodIndex::Seed]),
+          _ => return Err(WingError::InvalidBird(format!("Got {self:?} in unexpected arm")))
+        };
         Ok(ActivateResult {
-          immediate_actions: vec![Action::DoThen(Box::new(Action::TuckBirdCard(*habitat, bird_idx)), Box::new(Action::GetFoodChoice(Box::new([FoodIndex::Seed]))))],
+          immediate_actions: vec![Action::DoThen(Box::new(Action::TuckBirdCard(*habitat, bird_idx)), Box::new(Action::GetFoodChoice(food_choices)))],
           ..Default::default()
         })
       },
@@ -420,7 +383,31 @@ impl BirdCard {
       },
       Self::HermitThrush => {
         // player(s) with the fewest birds in their [forest] gain 1 [die] from birdfeeder.
-        todo!()
+        let min_birds_num = (0..env.config().num_players)
+          .map(|idx| {
+            env.get_player(idx).get_mat().get_row(&Habitat::Forest).get_birds().len()
+          })
+          .min()
+          .unwrap();
+
+        let cur_player_idx = env.current_player_idx();
+
+        let mut actions = Vec::new();
+
+        for player_idx in 0..min_birds_num {
+          if min_birds_num < env.get_player(player_idx).get_mat().get_row(&Habitat::Wetland).get_birds().len() {
+            continue;
+          }
+
+          actions.push(Action::ChangePlayer(player_idx));
+          actions.push(Action::GetFood);
+        }
+        actions.push(Action::ChangePlayer(cur_player_idx));
+
+        Ok(ActivateResult {
+          immediate_actions: actions,
+          ..Default::default()
+        })
       },
       Self::BlackDrongo => {
         // discard any number of [card] from the tray then refill it. if at least one of the discarded birds is a [grassland] bird, lay 1 [egg] on this bird.
@@ -454,10 +441,6 @@ impl BirdCard {
         // gain 1 [invertebrate] or [seed] from the birdfeeder, if there is one.
         todo!()
       },
-      Self::AsianKoel => {
-        // when another player takes the "lay eggs" action, this bird lays 1 [egg] on another bird with a [platform] nest. you may go 3 over its egg limit while using this power.
-        todo!()
-      },
       Self::RufousBandedHoneyeater => {
         // discard 1 [invertebrate]. if you do, gain 1 [nectar] from the supply.
         todo!()
@@ -482,10 +465,6 @@ impl BirdCard {
         // choose 1 other player. you both draw 1 [card] from the deck.
         todo!()
       },
-      Self::EurasianGoldenOriole => {
-        // when another player takes the "gain food" action, gain 1 [invertebrate] or [fruit] from the birdfeeder at the end of their turn.
-        todo!()
-      },
       Self::AustralianIbis => {
         // shuffle the discard pile, then draw 2 [card] from it. choose 1 and tuck it behind this bird or add it to your hand. discard the other.
         todo!()
@@ -496,10 +475,6 @@ impl BirdCard {
       },
       Self::LittleGrebe => {
         // for each bird in this column with an [egg] on it, draw 1 [card]. keep 1 and discard the rest.
-        todo!()
-      },
-      Self::BarrowsGoldeneye => {
-        // when another player takes the "lay eggs" action, lay 1 [egg] on another bird with a [cavity] nest.
         todo!()
       },
       Self::PurpleHeron => {
@@ -606,10 +581,6 @@ impl BirdCard {
         // look through all discarded bonus cards. keep 1 of them.
         todo!()
       },
-      Self::SnowBunting => {
-        // when another player tucks a [card] for any reason, tuck 1 [card] from your hand behind this bird, then draw 1 [card] at the end of their turn.
-        todo!()
-      },
       Self::EuropeanHoneyBuzzard => {
         // reset the birdfeeder. if you do, gain all [invertebrate] in the birdfeeder after resetting.
         todo!()
@@ -669,7 +640,7 @@ impl BirdCard {
           })
           .collect();
         for (row_idx, bird_idx) in idxs {
-          env.current_player_mut().get_mat_mut().get_row_mut(&row_idx.into()).place_egg_at_exact_bird_idx(bird_idx);
+          let _ = env.current_player_mut().get_mat_mut().get_row_mut(&row_idx.into()).place_egg_at_exact_bird_idx(bird_idx);
         }
 
         Ok(Default::default())
@@ -697,16 +668,42 @@ impl BirdCard {
         // tuck 1 [card] from your hand behind this bird. if you do, all players gain 1 [nectar] from the supply.
         todo!()
       },
-      Self::AmericanAvocet => {
-        // when another player takes the "lay eggs" action, lay 1 [egg] on another bird with a [ground] nest.
-        todo!()
+      Self::AmericanAvocet
+        | Self::BeltedKingfisher
+        | Self::BronzedCowbird
+        | Self::BrownHeadedCowbird
+        | Self::YellowBilledCuckoo
+        | Self::SpangledDrongo
+        | Self::LoggerheadShrike
+        | Self::CommonCuckoo
+        | Self::BlackVulture
+        | Self::BlackBilledMagpie
+        | Self::TurkeyVulture
+        | Self::EuropeanGoldfinch
+        | Self::PheasantCoucal
+        | Self::HorsfieldsBronzeCuckoo
+        | Self::VioletCuckoo
+        | Self::SnowBunting
+        | Self::BarrowsGoldeneye
+        | Self::EurasianGoldenOriole
+        | Self::AsianKoel
+        | Self::EurasianTreeSparrow
+        | Self::EasternKingbird
+        | Self::HornedLark
+        | Self::SacredKingfisher
+        | Self::AustralianOwletNightjar
+        => {
+        // when another player takes X do Y
+        env.push_callback(BirdCardCallback {
+            card: *self,
+            habitat: *habitat,
+            card_idx: bird_idx,
+            card_player_idx: env.current_player_idx(),
+        });
+        Ok(Default::default())
       },
       Self::ScalyBreastedMunia => {
         // gain 1 [seed] from the supply or tuck 1 [card] from the deck behind this bird.
-        todo!()
-      },
-      Self::BeltedKingfisher => {
-        // when another player plays a bird in their [wetland], gain 1 [fish] from the supply.
         todo!()
       },
       Self::AnnasHummingbird
@@ -765,14 +762,10 @@ impl BirdCard {
         Ok(ActivateResult {
           immediate_actions: vec![Action::DoThen(
             Box::new(Action::DiscardFoodChoice(Box::new([(FoodIndex::Seed, 1)]))),
-            Box::new(Action::LayEggAtLoc(*habitat, bird_idx, 1)),
+            Box::new(Action::GetEggAtLoc(*habitat, bird_idx, 1)),
           )],
           ..Default::default()
         })
-      },
-      Self::SpangledDrongo => {
-        // when another player gains [nectar], gain 1 [nectar] from the supply.
-        todo!()
       },
       Self::BrownFalcon => {
         // look at a [card] from the deck. if its food cost includes an [invertebrate] or a [rodent], tuck it behind this bird. if not, discard it.
@@ -847,9 +840,28 @@ impl BirdCard {
       },
       Self::BlackBelliedWhistlingDuck
         | Self::CanadaGoose
-        | Self::SandhillCrane => {
+        | Self::SandhillCrane
+        | Self::AmericanWhitePelican
+        | Self::DoubleCrestedCormorant
+        => {
         // discard 1 [seed] to tuck 2 [card] from the deck behind this bird.
-        todo!()
+
+        let choices = match self {
+          Self::BlackBelliedWhistlingDuck
+            | Self::CanadaGoose
+            | Self::SandhillCrane => Box::new([(FoodIndex::Seed, 1)]),
+          Self::AmericanWhitePelican
+            | Self::DoubleCrestedCormorant => Box::new([(FoodIndex::Fish, 1)]),
+          _ => return Err(WingError::InvalidBird(format!("Got {self:?} in unexpected arm")))
+        };
+
+        Ok(ActivateResult{
+          immediate_actions: vec![Action::DoThen(
+            Box::new(Action::DiscardFoodChoice(choices)),
+            Box::new(Action::MultipleActions(vec![Action::TuckBirdCardFromDeck(*habitat, bird_idx), Action::TuckBirdCardFromDeck(*habitat, bird_idx)])),
+          )],
+          ..Default::default()
+        })
       },
       Self::BrownPelican => {
         // gain 3 [fish] from the supply.
@@ -904,10 +916,6 @@ impl BirdCard {
         // tuck 1 [card] from your hand behind this bird. if you do, all players gain 1 [seed] from the supply.
         todo!()
       },
-      Self::LoggerheadShrike => {
-        // when another player takes the "gain food" action, if they gain any number of [rodent], cache 1 [rodent] from the supply on this bird.
-        todo!()
-      },
       Self::CommonSandpiper => {
         // draw 1 [card] for each bird in your [wetland] with an [egg] on it. keep 1 and discard the rest.
         todo!()
@@ -916,9 +924,48 @@ impl BirdCard {
         // cache 1 [invertebrate], [seed], or [fruit] from the birdfeeder on this bird, if there is one.
         todo!()
       },
-      Self::LazuliBunting => {
-        // all players lay 1 [egg] on any 1 [bowl] bird. you may lay 1 [egg] on 1 additional [bowl] bird.
-        todo!()
+      Self::LazuliBunting | Self::WesternMeadowlark | Self::PileatedWoodpecker => {
+        // all players lay 1 [egg] on any 1 [NEST TYPE] bird. you may lay 1 [egg] on 1 additional [bowl] bird.
+
+        let nest_type = match self {
+          Self::LazuliBunting => NestType::Bowl,
+          Self::WesternMeadowlark => NestType::Ground,
+          Self::PileatedWoodpecker => NestType::Cavity,
+          _ => return Err(WingError::InvalidBird(format!("Got {self:?} in unexpected arm")))
+        };
+
+        let cur_player_idx = env.current_player_idx();
+        let mut actions = Vec::new();
+        for player_idx in 0..env.config().num_players {
+          let mat = env.get_player(player_idx).get_mat();
+          let mut playable_birds = vec![];
+          for habitat in [Habitat::Forest, Habitat::Grassland, Habitat::Wetland] {
+            let row = mat.get_row(&habitat);
+            for (bird_idx, bird_card) in row.get_birds().iter().enumerate() {
+              if bird_card.nest_type() == &nest_type && row.can_place_egg(bird_idx) {
+                playable_birds.push((habitat, bird_idx));
+              }
+            }
+          }
+
+          // If there are birds that satisfy condition, add actions for that
+          if playable_birds.len() > 0 {
+            actions.push(Action::ChangePlayer(player_idx));
+            if player_idx == cur_player_idx {
+              actions.push(Action::GetEggChoice(playable_birds.clone().into_boxed_slice()));
+              actions.push(Action::GetEggChoice(playable_birds.into_boxed_slice()));
+            } else {
+              actions.push(Action::GetEggChoice(playable_birds.into_boxed_slice()));
+            }
+          }
+        }
+
+        // Switch back to the player
+        actions.push(Action::ChangePlayer(cur_player_idx));
+        Ok(ActivateResult {
+          immediate_actions: actions,
+          ..Default::default()
+        })
       },
       Self::CommonStarling
         | Self::EurasianCollaredDove => {
@@ -961,10 +1008,6 @@ impl BirdCard {
 
         env.set_current_player(cur_player_idx);
         Ok(Default::default())
-      },
-      Self::CommonCuckoo => {
-        // when another player takes the "lay eggs" action, this bird lays 1 [egg] on another bird with a [bowl] or [ground] nest.
-        todo!()
       },
       Self::WhiteFacedHeron => {
         // reset the birdfeeder and gain all [fish], if there are any. you may cache any or all of them on this bird.
@@ -1053,11 +1096,6 @@ impl BirdCard {
         // choose 1 other player. you both gain 1 [seed] from the supply.
         todo!()
       },
-      Self::AmericanWhitePelican
-        | Self::DoubleCrestedCormorant => {
-        // discard 1 [fish] to tuck 2 [card] from the deck behind this bird.
-        todo!()
-      },
       Self::Ruff => {
         // tuck up to 3 [card] from your hand behind this bird. draw 1 [card] for each card you tucked.
         todo!()
@@ -1100,7 +1138,24 @@ impl BirdCard {
       },
       Self::RoseBreastedGrosbeak => {
         // gain 1 [seed] or [fruit] from the birdfeeder, if available.
-        todo!()
+        let has_seed = env._bird_feeder.contains(FoodIndex::Seed) > 0;
+        let has_fruit = env._bird_feeder.contains(FoodIndex::Fruit) > 0;
+
+        if has_seed && has_fruit {
+          return Ok(ActivateResult {
+            immediate_actions: vec![Action::GetFoodChoice(Box::new([FoodIndex::Seed, FoodIndex::Fruit]))],
+            ..Default::default()
+          });
+        }
+        if has_seed {
+          env.current_player_mut().add_food(FoodIndex::Seed, 1);
+          env._bird_feeder.take_specific_food(FoodIndex::Seed).unwrap();
+        } else if has_fruit {
+          env.current_player_mut().add_food(FoodIndex::Fruit, 1);
+          env._bird_feeder.take_specific_food(FoodIndex::Fruit).unwrap();
+        }
+
+        Ok(ActivateResult::default())
       },
       Self::RoyalSpoonbill => {
         // draw 1 face-up [card] from the tray with a [platform] or [star] nest. you may reset or refill the tray before doing so.
@@ -1132,12 +1187,6 @@ impl BirdCard {
       },
       Self::LittleRingedPlover => {
         // discard 1 [card] from your hand. if you do, lay 1 [egg] on this bird.
-        todo!()
-      },
-      Self::BlackVulture
-        | Self::BlackBilledMagpie
-        | Self::TurkeyVulture => {
-        // when another player's [predator] succeeds, gain 1 [die] from the birdfeeder.
         todo!()
       },
       Self::CommonMyna => {
@@ -1275,7 +1324,7 @@ impl BirdCard {
         todo!()
       },
       Self::AmericanOystercatcher => {
-        // draw [card] equal to the number of players +1. starting with you and proceeding clockwise, each player selects 1 of those cards and places it in their hand. you keep the extra card.
+        // draw [card] equal to the number of players + 1. starting with you and proceeding clockwise, each player selects 1 of those cards and places it in their hand. you keep the extra card.
         todo!()
       },
       Self::Osprey
@@ -1320,16 +1369,8 @@ impl BirdCard {
         // gain 1 [fruit] from the supply, or discard 1 [fruit] to gain 1 [nectar] from the supply.
         todo!()
       },
-      Self::EuropeanGoldfinch => {
-        // when another player tucks a [card] for any reason, tuck 1 [card] from the deck behind this bird.
-        todo!()
-      },
       Self::LargeBilledCrow => {
         // cache 1 [wild] from your supply on any bird. if you do, you may tuck 1 [card] from your hand behind this bird.
-        todo!()
-      },
-      Self::PheasantCoucal => {
-        // when another player takes the "lay eggs" action, lay 1 [egg] on this bird.
         todo!()
       },
       Self::Brambling => {
@@ -1483,14 +1524,6 @@ impl BirdCard {
         // roll any 2 [die]. if you roll at least 1 [fish], cache 1 [fish] from the supply on this bird. all players may discard 1 [card] from their hand to gain 1 [fish] from the supply.
         todo!()
       },
-      Self::HorsfieldsBronzeCuckoo => {
-        // when another player takes the "lay eggs" action, lay 1 [egg] on a bird with a wingspan less than 30cm.
-        todo!()
-      },
-      Self::WesternMeadowlark => {
-        // all players lay 1 [egg] on any 1 [ground] bird. you may lay 1 [egg] on 1 additional [ground] bird.
-        todo!()
-      },
       Self::BewicksWren
         | Self::BlueGrosbeak
         | Self::ChimneySwift
@@ -1572,15 +1605,27 @@ impl BirdCard {
       Self::ChihuahuanRaven
         | Self::CommonRaven => {
         // discard 1 [egg] from any of your other birds to gain 2 [wild] from the supply.
-        todo!()
+        let mut choices = vec![];
+        let mat = env.current_player().get_mat();
+        for iter_habitat in [Habitat::Forest, Habitat::Grassland, Habitat::Wetland] {
+          let row = mat.get_row(&iter_habitat);
+          for (iter_bird_idx, _bird_card) in row.get_birds().iter().enumerate() {
+            if (iter_habitat != *habitat || iter_bird_idx != bird_idx) && row.can_discard_egg(bird_idx)  {
+              choices.push((iter_habitat, iter_bird_idx));
+            }
+          }
+        }
+        Ok(ActivateResult{
+          immediate_actions: vec![Action::DoThen(
+            Box::new(Action::DiscardEggChoice(choices.into_boxed_slice())),
+            Box::new(Action::MultipleActions(vec![Action::GetFood, Action::GetFood])),
+          )],
+          ..Default::default()
+        })
       },
       Self::EurasianEagleOwl
         | Self::EurasianMarshHarrier => {
         // up to 3 times, draw 1 [card] from the deck. when you stop, if the birds' total wingspan is less than 110 cm, tuck them behind this bird. if not, discard them.
-        todo!()
-      },
-      Self::VioletCuckoo => {
-        // when another player takes the "lay eggs" action, lay 1 [egg] on another bird with wingspan less than 30 cm. you may go 2 over its egg limit while using this power.
         todo!()
       },
       Self::IndianVulture => {
@@ -1648,7 +1693,7 @@ impl BirdCard {
       },
       Self::SarusCrane => {
         // each player may discard 1 [egg] to draw 1 [card] from the deck.
-        let actions = (0..env.config().num_players)
+        let mut actions: Vec<_> = (0..env.config().num_players)
           .flat_map(|player_idx| {
             [
               Action::ChangePlayer(player_idx),
@@ -1656,6 +1701,7 @@ impl BirdCard {
             ]
           }).collect();
 
+        actions.push(Action::ChangePlayer(env.current_player_idx()));
         Ok(ActivateResult{
           immediate_actions: actions,
           ..Default::default()
@@ -1693,9 +1739,25 @@ impl BirdCard {
         // draw 2 [card]. all other players draw 1 [card] from the deck.
         todo!()
       },
-      Self::BaldEagle => {
-        // gain all [fish] that are in the birdfeeder.
-        todo!()
+
+      Self::BlackWoodpecker
+        | Self::NorthernFlicker
+        | Self::BaldEagle => {
+        // gain all FOOD TYPE that are in the birdfeeder.
+        let food_type = match self {
+          Self::BlackWoodpecker | Self::NorthernFlicker => FoodIndex::Invertebrate,
+          Self::BaldEagle => FoodIndex::Fish,
+          _ => return Err(WingError::InvalidBird(format!("Got {self:?} in unexpected arm")))
+        };
+
+        let num_food = env._bird_feeder.contains(food_type);
+        env.current_player_mut().add_food(food_type, num_food as u8);
+
+        for _ in 0..num_food {
+          env._bird_feeder.take_specific_food(food_type).unwrap();
+        }
+
+        Ok(Default::default())
       },
       Self::GreaterFlamingo => {
         // choose 1 other player. for each action cube on their [wetland], tuck 1 [card] from your hand behind this bird, then draw an equal number of [card].
@@ -1718,5 +1780,158 @@ impl BirdCard {
         todo!()
       },
     }
+  }
+
+  /// Performs a condition check for "Once between turns, when X happens do Y" (aka Pink birds).
+  ///
+  /// If bird_player_idx is current players index it always returns Ok(false).
+  /// Does both the check (X) and performs action if (Y) happens.
+  /// If bird is has such a condition (it is a pink bird) it will return Ok(true), if X succeeds and Ok(false) if it fails.
+  /// If bird is not a pink bird, returns a Err(InvalidBird)
+  pub fn conditional_callback(
+    &self,
+    env: &mut WingspanEnv,
+    action_type_taken: &Action,
+    action_taken: usize,
+    habitat: &Habitat,
+    bird_idx: usize,
+    bird_player_idx: usize,
+  ) -> WingResult<bool> {
+    // Pink b
+    if bird_player_idx == env.current_player_idx() {
+      return Ok(false);
+    }
+
+
+    match self {
+      Self::AustralianOwletNightjar => {
+        // when another player takes the "gain food" action, gain 1 [invertebrate] from the birdfeeder, if there is one, at the end of their turn.
+        todo!()
+      },
+      Self::SacredKingfisher => {
+        // when another player takes the "gain food" action, gain 1 [invertebrate], [fish], or [rodent] from the birdfeeder, if there is one, at the end of their turn.
+        todo!()
+      },
+      Self::BronzedCowbird
+        | Self::BrownHeadedCowbird
+        | Self::YellowBilledCuckoo => {
+        // when another player takes the "lay eggs" action, lay 1 [egg] on a bird with a [bowl] nest.
+        todo!()
+      },
+      Self::HornedLark => {
+        // when another player plays a bird in their [grassland], tuck 1 [card] from your hand behind this bird.
+        todo!()
+      },
+      Self::EasternKingbird => {
+        // when another player plays a bird in their [forest], gain 1 [invertebrate] from the supply.
+        todo!()
+      },
+      Self::EurasianTreeSparrow => {
+        // when another player takes the "gain food" action, gain 1 [seed] from the birdfeeder at the end of their turn.
+        todo!()
+      },
+      Self::AsianKoel => {
+        // when another player takes the "lay eggs" action, this bird lays 1 [egg] on another bird with a [platform] nest. you may go 3 over its egg limit while using this power.
+        todo!()
+      },
+      Self::EurasianGoldenOriole => {
+        // when another player takes the "gain food" action, gain 1 [invertebrate] or [fruit] from the birdfeeder at the end of their turn.
+        todo!()
+      },
+      Self::BarrowsGoldeneye => {
+        // when another player takes the "lay eggs" action, lay 1 [egg] on another bird with a [cavity] nest.
+        todo!()
+      },
+      Self::SnowBunting => {
+        // when another player tucks a [card] for any reason, tuck 1 [card] from your hand behind this bird, then draw 1 [card] at the end of their turn.
+        todo!()
+      },
+      Self::AmericanAvocet => {
+        // when another player takes the "lay eggs" action, lay 1 [egg] on another bird with a [ground] nest.
+        if action_type_taken == &Action::ChooseAction && action_taken == 1 {
+          env.append_actions(
+            &mut vec![
+              Action::ChangePlayer(bird_player_idx),
+              Action::GetEgg,
+              Action::ChangePlayer(env.current_player_idx()),
+            ]
+          );
+          Ok(true)
+        } else {
+          Ok(false)
+        }
+      },
+      Self::BeltedKingfisher => {
+        // when another player plays a bird in their [wetland], gain 1 [fish] from the supply.
+        todo!()
+      },
+      Self::SpangledDrongo => {
+        // when another player gains [nectar], gain 1 [nectar] from the supply.
+        todo!()
+      },
+      Self::LoggerheadShrike => {
+        // when another player takes the "gain food" action, if they gain any number of [rodent], cache 1 [rodent] from the supply on this bird.
+        todo!()
+      },
+      Self::CommonCuckoo => {
+        // when another player takes the "lay eggs" action, this bird lays 1 [egg] on another bird with a [bowl] or [ground] nest.
+        todo!()
+      },
+      Self::BlackVulture
+        | Self::BlackBilledMagpie
+        | Self::TurkeyVulture => {
+        // when another player's [predator] succeeds, gain 1 [die] from the birdfeeder.
+        todo!()
+      },
+      Self::EuropeanGoldfinch => {
+        // when another player tucks a [card] for any reason, tuck 1 [card] from the deck behind this bird.
+        todo!()
+      },
+      Self::PheasantCoucal => {
+        // when another player takes the "lay eggs" action, lay 1 [egg] on this bird.
+        todo!()
+      },
+      Self::HorsfieldsBronzeCuckoo => {
+        // when another player takes the "lay eggs" action, lay 1 [egg] on a bird with a wingspan less than 30cm.
+        todo!()
+      },
+      Self::VioletCuckoo => {
+        // when another player takes the "lay eggs" action, lay 1 [egg] on another bird with wingspan less than 30 cm. you may go 2 over its egg limit while using this power.
+        todo!()
+      },
+      _ => Err(WingError::InvalidBird(format!("Bird {self:?} was called in callback, but it doesn't invoke such."))),
+    }
+  }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use std::panic;
+
+    use crate::{bird_card::get_deck, expansion::Expansion, wingspan_env::{WingspanEnv, WingspanEnvConfigBuilder}};
+
+  #[test]
+  fn check_card_activation() {
+    let deck = get_deck(&[Expansion::Core]);
+
+    let mut good = 0;
+    let mut bad = 0;
+
+    for bird_card in deck {
+      // Create a fresh env and play a card
+      let mut env = WingspanEnv::try_new(WingspanEnvConfigBuilder::default().build().unwrap());
+
+      let habitat = bird_card.habitats()[0];
+      env.current_player_mut().get_mat_mut().put_bird_card(bird_card, &habitat).unwrap();
+
+      match panic::catch_unwind(move || { bird_card.activate(&mut env, &habitat, 0) }) {
+        Ok(_) => good += 1,
+        Err(_) => bad += 1,
+      };
+    }
+
+    println!("Good: {good} Bad: {bad}");
+    assert!(false);
   }
 }

@@ -5,12 +5,16 @@ use thiserror::Error;
 pub enum WingError {
     #[error("Invalid action")]
     InvalidAction,
+
+    #[error("Invalid bird")]
+    InvalidBird(String),
 }
 
 impl From<WingError> for PyErr {
     fn from(val: WingError) -> Self {
         match val {
-            WingError::InvalidAction => PyValueError::new_err(format!("{}", val))
+            WingError::InvalidAction => PyValueError::new_err(format!("{}", val)),
+            WingError::InvalidBird(err_msg) => PyValueError::new_err(format!("{}", err_msg)),
         }
     }
 }

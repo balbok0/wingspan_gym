@@ -77,15 +77,23 @@ impl MatRow {
             .count()
     }
 
+    pub fn can_place_egg(&self, bird_idx: usize) -> bool {
+        bird_idx < self.eggs.len() && bird_idx < self.eggs_cap.len() && self.eggs_cap[bird_idx] > self.eggs[bird_idx]
+    }
+
+    pub fn can_discard_egg(&self, bird_idx: usize) -> bool {
+        bird_idx < self.eggs.len() && self.eggs[bird_idx] > 0
+    }
+
     pub fn place_egg(&mut self, idx: usize) -> Result<(), usize> {
         let mut count = 0;
 
-        for (col_idx, (egg, cap)) in self.eggs.iter().zip(self.eggs_cap.iter()).enumerate() {
+        for (bird_idx, (egg, cap)) in self.eggs.iter().zip(self.eggs_cap.iter()).enumerate() {
             if egg < cap {
                 // Valid spot to put egg in
                 if count == idx {
                     // This is the requested spot
-                    self.eggs[col_idx] += 1;
+                    self.eggs[bird_idx] += 1;
                     return Ok(())
                 } else {
                     // Not yet the requested spot
@@ -103,13 +111,15 @@ impl MatRow {
             None => return Err(WingError::InvalidAction),
         };
 
-        self.place_egg_at_exact_bird_idx(bird_idx);
-        Ok(())
+        self.place_egg_at_exact_bird_idx(bird_idx)
     }
 
-    pub fn place_egg_at_exact_bird_idx(&mut self, bird_idx: usize) {
-        if self.eggs_cap[bird_idx] > self.eggs[bird_idx] {
+    pub fn place_egg_at_exact_bird_idx(&mut self, bird_idx: usize) -> WingResult<()> {
+        if self.can_place_egg(bird_idx) {
             self.eggs[bird_idx] += 1;
+            Ok(())
+        } else {
+            Err(WingError::InvalidAction)
         }
     }
 
@@ -133,6 +143,15 @@ impl MatRow {
 
         // Requested spot not found, so return number of valid spots in this row
         Err(count)
+    }
+
+    pub fn discard_egg_at_exact_bird_idx(&mut self, bird_idx: usize) -> WingResult<()> {
+        if self.can_discard_egg(bird_idx) {
+            self.eggs[bird_idx] -= 1;
+            Ok(())
+        } else {
+            Err(WingError::InvalidAction)
+        }
     }
 
     pub fn get_birds(&self) -> &Vec<BirdCard> {

@@ -26,6 +26,10 @@ impl DeckAndHolder {
         }
     }
 
+    pub fn get_display_cards(&self) -> &Vec<BirdCard> {
+        &self._face_up_display
+    }
+
     pub fn draw_cards_from_deck(&mut self, num_cards: usize) -> Vec<BirdCard> {
         self._bird_deck.split_off(self._bird_deck.len() - num_cards)
     }

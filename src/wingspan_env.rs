@@ -4,16 +4,7 @@ use rand::{rngs::StdRng, seq::SliceRandom, SeedableRng};
 use pyo3::{exceptions::PyValueError, prelude::*};
 
 use crate::{
-    action::{Action, PyAction},
-    bird_card::get_deck as get_birds_deck,
-    bird_feeder::BirdFeeder,
-    bonus_card::{get_deck as get_bonus_deck, BonusCard},
-    deck_and_holder::DeckAndHolder,
-    error::{WingError, WingResult},
-    expansion::Expansion,
-    habitat::Habitat,
-    player::Player,
-    step_result::StepResult
+    action::{Action, PyAction}, bird_card::get_deck as get_birds_deck, bird_card_callback::BirdCardCallback, bird_feeder::BirdFeeder, bonus_card::{get_deck as get_bonus_deck, BonusCard}, deck_and_holder::DeckAndHolder, error::{WingError, WingResult}, expansion::Expansion, habitat::Habitat, player::Player, step_result::StepResult
 };
 
 #[derive(Debug, Builder, Clone)]
@@ -38,6 +29,7 @@ pub struct WingspanEnv {
     _players: Vec<Player>,
     pub(crate) _bird_feeder: BirdFeeder,
     _action_queue: Vec<Action>,
+    _callbacks: Vec<BirdCardCallback>,  // List of callback items to go through.
 }
 
 impl WingspanEnv {
@@ -53,6 +45,7 @@ impl WingspanEnv {
             _bird_feeder: Default::default(),
             _players: Vec::with_capacity(num_players),
             _action_queue: Vec::with_capacity(50), // 50 seems like a reasonable upper bound even for most intense chains?
+            _callbacks: Default::default(),
         };
         env.reset(None);
 
@@ -258,6 +251,10 @@ impl WingspanEnv {
     pub fn append_actions(&mut self, actions: &mut Vec<Action>) {
         self._action_queue.append(actions)
     }
+
+    pub fn push_callback(&mut self, callback: BirdCardCallback) {
+        self._callbacks.push(callback)
+    }
 }
 
 
@@ -308,6 +305,7 @@ impl PyWingspanEnv {
         match slf.borrow_mut().inner.step(action_idx) {
             Ok(x) => Ok(x),
             Err(WingError::InvalidAction) => Ok(StepResult::Invalid),
+            Err(x) => Err(x.into()),
             // Err(x) => return Err(x.into()),
         }
     }
