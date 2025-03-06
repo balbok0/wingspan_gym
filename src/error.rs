@@ -14,7 +14,7 @@ impl From<WingError> for PyErr {
     fn from(val: WingError) -> Self {
         match val {
             WingError::InvalidAction => PyValueError::new_err(format!("{}", val)),
-            WingError::InvalidBird(err_msg) => PyValueError::new_err(format!("{}", err_msg)),
+            WingError::InvalidBird(err_msg) => PyValueError::new_err(err_msg.to_string()),
         }
     }
 }

@@ -232,6 +232,11 @@ impl WingspanEnv {
         self._player_idx = idx;
     }
 
+    pub fn increment_player_idx(&mut self) {
+        self._player_idx += 1;
+        self._player_idx %= self.config.num_players;
+    }
+
     pub fn action_space_size(&self) -> Option<usize> {
         self._action_queue.last().map(|x| x.action_space_size(self))
     }
@@ -249,6 +254,8 @@ impl WingspanEnv {
     }
 
     pub fn append_actions(&mut self, actions: &mut Vec<Action>) {
+        // Appends actions to the top of the stack (it is a LIFO queue)
+        // Note that hence last element of actions will become `env.next_action`
         self._action_queue.append(actions)
     }
 

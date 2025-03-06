@@ -1,9 +1,7 @@
-use std::thread::current;
-
 use strum::IntoEnumIterator;
 
 use super::BirdCard;
-use crate::{action::Action, bird_card_callback::BirdCardCallback, error::{WingError, WingResult}, food::FoodIndex, habitat::Habitat, nest::NestType, wingspan_env::WingspanEnv};
+use crate::{action::Action, bird_card::BirdCardColor, bird_card_callback::BirdCardCallback, error::{WingError, WingResult}, food::FoodIndex, habitat::Habitat, nest::NestType, wingspan_env::WingspanEnv};
 
 #[derive(Debug)]
 #[derive(Default)]
@@ -71,7 +69,10 @@ impl BirdCard {
         | Self::YellowHeadedBlackbird => {
         // tuck 1 [card] from your hand behind this bird. if you do, you may also lay 1 [egg] on this bird.
         Ok(ActivateResult{
-          immediate_actions: vec![Action::DoThen(Box::new(Action::TuckBirdCard(*habitat, bird_idx)), Box::new(Action::GetEggAtLoc(*habitat, bird_idx, 1)))],
+          immediate_actions: vec![Action::DoThen(
+            Box::new(Action::TuckBirdCard(*habitat, bird_idx)),
+            Box::new(Action::GetEggAtLoc(*habitat, bird_idx, 1))
+          )],
           ..Default::default()
         })
       },
@@ -113,7 +114,7 @@ impl BirdCard {
         | Self::NorthernBobwhite
         | Self::ScaledQuail => {
         // lay 1 [egg] on this bird.
-        env.current_player_mut().get_mat_mut().get_row_mut(habitat).place_egg_at_exact_bird_idx(bird_idx);
+        env.current_player_mut().get_mat_mut().get_row_mut(habitat).place_egg_at_exact_bird_idx(bird_idx)?;
         Ok(Default::default())
       },
       Self::CommonIora => {
@@ -399,10 +400,10 @@ impl BirdCard {
             continue;
           }
 
-          actions.push(Action::ChangePlayer(player_idx));
           actions.push(Action::GetFood);
+          actions.push(Action::ChangePlayer(player_idx));
         }
-        actions.push(Action::ChangePlayer(cur_player_idx));
+        actions.insert(0, Action::ChangePlayer(cur_player_idx));
 
         Ok(ActivateResult {
           immediate_actions: actions,
@@ -524,7 +525,21 @@ impl BirdCard {
       },
       Self::HoodedMerganser => {
         // repeat 1 [predator] power in this habitat.
-        todo!()
+        let num_choices  = env.current_player().get_mat().get_row(habitat).get_birds()
+          .iter()
+          .filter(|bc| bc.is_predator())
+          .count();
+
+        if num_choices == 0 {
+          return Ok(Default::default());
+        }
+
+        Ok(ActivateResult {
+          immediate_actions: vec![
+            Action::ChooseThenAction(num_choices as u8, *self, *habitat, bird_idx)
+          ],
+          ..Default::default()
+        })
       },
       Self::CommonBuzzard
         | Self::EurasianHobby
@@ -709,7 +724,12 @@ impl BirdCard {
       Self::AnnasHummingbird
         | Self::RubyThroatedHummingbird => {
         // each player gains 1 [die] from the birdfeeder, starting with the player of your choice.
-        todo!()
+        Ok(ActivateResult {
+          immediate_actions: vec![
+            Action::ChooseThenAction(env.config().num_players as u8, *self, *habitat, bird_idx)
+          ],
+          ..Default::default()
+        })
       },
       Self::AmericanCoot
         | Self::AmericanRobin
@@ -949,19 +969,19 @@ impl BirdCard {
           }
 
           // If there are birds that satisfy condition, add actions for that
-          if playable_birds.len() > 0 {
-            actions.push(Action::ChangePlayer(player_idx));
+          if !playable_birds.is_empty() {
             if player_idx == cur_player_idx {
               actions.push(Action::GetEggChoice(playable_birds.clone().into_boxed_slice()));
               actions.push(Action::GetEggChoice(playable_birds.into_boxed_slice()));
             } else {
               actions.push(Action::GetEggChoice(playable_birds.into_boxed_slice()));
             }
+            actions.push(Action::ChangePlayer(player_idx));
           }
         }
 
         // Switch back to the player
-        actions.push(Action::ChangePlayer(cur_player_idx));
+        actions.insert(0, Action::ChangePlayer(cur_player_idx));
         Ok(ActivateResult {
           immediate_actions: actions,
           ..Default::default()
@@ -1325,7 +1345,15 @@ impl BirdCard {
       },
       Self::AmericanOystercatcher => {
         // draw [card] equal to the number of players + 1. starting with you and proceeding clockwise, each player selects 1 of those cards and places it in their hand. you keep the extra card.
-        todo!()
+        Ok(
+          ActivateResult {
+            immediate_actions: vec![
+              Action::ChangePlayer(env.current_player_idx()),
+              Action::GetCardFromSetAndChangePlayer(env._bird_deck.draw_cards_from_deck(env.config().num_players + 1))
+            ],
+            ..Default::default()
+          }
+        )
       },
       Self::Osprey
         | Self::BaltimoreOriole
@@ -1363,7 +1391,21 @@ impl BirdCard {
       Self::GrayCatbird
         | Self::NorthernMockingbird => {
         // repeat a brown power on another bird in this habitat.
-        todo!()
+        let num_choices  = env.current_player().get_mat().get_row(habitat).get_birds()
+          .iter()
+          .filter(|bc| bc.color() == &BirdCardColor::Brown)
+          .count();
+
+        if num_choices == 0 {
+          return Ok(Default::default());
+        }
+
+        Ok(ActivateResult {
+          immediate_actions: vec![
+            Action::ChooseThenAction(num_choices as u8, *self, *habitat, bird_idx)
+          ],
+          ..Default::default()
+        })
       },
       Self::Mistletoebird => {
         // gain 1 [fruit] from the supply, or discard 1 [fruit] to gain 1 [nectar] from the supply.
@@ -1696,12 +1738,12 @@ impl BirdCard {
         let mut actions: Vec<_> = (0..env.config().num_players)
           .flat_map(|player_idx| {
             [
+              Action::DoThen(Box::new(Action::DiscardEgg), Box::new(Action::GetBirdCardFromDeck)),
               Action::ChangePlayer(player_idx),
-              Action::DoThen(Box::new(Action::DiscardEgg), Box::new(Action::GetBirdCardFromDeck))
             ]
           }).collect();
 
-        actions.push(Action::ChangePlayer(env.current_player_idx()));
+        actions.insert(0, Action::ChangePlayer(env.current_player_idx()));
         Ok(ActivateResult{
           immediate_actions: actions,
           ..Default::default()
@@ -1793,8 +1835,8 @@ impl BirdCard {
     env: &mut WingspanEnv,
     action_type_taken: &Action,
     action_taken: usize,
-    habitat: &Habitat,
-    bird_idx: usize,
+    _habitat: &Habitat,
+    _bird_idx: usize,
     bird_player_idx: usize,
   ) -> WingResult<bool> {
     // Pink b
@@ -1851,9 +1893,9 @@ impl BirdCard {
         if action_type_taken == &Action::ChooseAction && action_taken == 1 {
           env.append_actions(
             &mut vec![
-              Action::ChangePlayer(bird_player_idx),
-              Action::GetEgg,
               Action::ChangePlayer(env.current_player_idx()),
+              Action::GetEgg,
+              Action::ChangePlayer(bird_player_idx),
             ]
           );
           Ok(true)
@@ -1902,6 +1944,73 @@ impl BirdCard {
       _ => Err(WingError::InvalidBird(format!("Bird {self:?} was called in callback, but it doesn't invoke such."))),
     }
   }
+
+  pub fn after_choice_callback(&self, choice_idx: u8, env: &mut WingspanEnv, habitat: &Habitat, _bird_idx: usize,) -> WingResult<ActivateResult> {
+    match self {
+      Self::AnnasHummingbird
+        | Self::RubyThroatedHummingbird => {
+        // each player gains 1 [die] from the birdfeeder, starting with the player of your choice.
+        let choice_idx = choice_idx as usize;
+        if choice_idx >= env.config().num_players {
+          return Err(WingError::InvalidAction);
+        }
+
+        let mut actions = Vec::new();
+        // Loop from choice idx to end and then from start to choice idx
+        for player_idx in choice_idx..env.config().num_players {
+          actions.push(Action::GetFood);
+          actions.push(Action::ChangePlayer(player_idx));
+        }
+        for player_idx in 0..choice_idx {
+          actions.push(Action::GetFood);
+          actions.push(Action::ChangePlayer(player_idx));
+        }
+
+        actions.insert(0, Action::ChangePlayer(env.current_player_idx()));
+
+        Ok(ActivateResult {
+          immediate_actions: actions,
+          ..Default::default()
+        })
+      },
+      Self::GrayCatbird
+        | Self::NorthernMockingbird => {
+        // repeat a brown power on another bird in this habitat.
+        let choice_idx = choice_idx as usize;
+
+        let bird_choices: Vec<_> = env.current_player().get_mat().get_row(habitat).get_birds()
+          .iter()
+          .enumerate()
+          .filter(|(_bird_idx, bc)| bc.color() == &BirdCardColor::Brown)
+          .collect();
+
+        if choice_idx >= bird_choices.len() {
+          return Err(WingError::InvalidAction);
+        }
+
+        let (choice_bird_idx, choice_bird_card) = bird_choices[choice_idx];
+        choice_bird_card.clone().activate(env, habitat, choice_bird_idx)
+      },
+      Self::HoodedMerganser => {
+        // repeat 1 [predator] power in this habitat.
+        let choice_idx = choice_idx as usize;
+
+        let bird_choices: Vec<_> = env.current_player().get_mat().get_row(habitat).get_birds()
+          .iter()
+          .enumerate()
+          .filter(|(_bird_idx, bc)| bc.is_predator())
+          .collect();
+
+        if choice_idx >= bird_choices.len() {
+          return Err(WingError::InvalidAction);
+        }
+
+        let (choice_bird_idx, choice_bird_card) = bird_choices[choice_idx];
+        choice_bird_card.clone().activate(env, habitat, choice_bird_idx)
+      },
+      _ => Err(WingError::InvalidBird(format!("Bird {self:?} was called in callback, but it doesn't invoke such."))),
+    }
+  }
 }
 
 
@@ -1931,7 +2040,6 @@ mod tests {
       };
     }
 
-    println!("Good: {good} Bad: {bad}");
-    assert!(false);
+    assert_eq!(bad, 0, "Got {} bad cards (should be 0). Got {} good cards.", bad, good);
   }
 }

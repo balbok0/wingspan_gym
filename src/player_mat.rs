@@ -43,21 +43,20 @@ impl MatRow {
     }
 
 
-    pub fn get_bird_actions(&self, _env: &mut WingspanEnv) -> (Vec<Action>, Vec<Action>) {
-        let actions = vec![];
-        let end_of_turn_actions = vec![];
+    pub fn get_bird_actions(&self, env: &mut WingspanEnv) -> (Vec<Action>, Vec<Action>) {
+        let mut actions = vec![];
+        let mut end_of_turn_actions = vec![];
 
         // Iterate through birds from right to left
-        for (_bird_idx, bird) in self.birds.iter().enumerate().rev() {
+        for (bird_idx, bird) in self.birds.iter().enumerate().rev() {
             if bird.color() != &BirdCardColor::Brown {
                 continue
             }
 
-            // TODO: After all (from core) of the BirdCard actions are implemented, do uncomment below
-            // if let Ok(mut action_res) =  bird.activate(env, &self.habitat, bird_idx) {
-            //     actions.append(&mut action_res.immediate_actions);
-            //     end_of_turn_actions.append(&mut action_res.end_of_turn_actions);
-            // }
+            if let Ok(mut action_res) =  bird.activate(env, &self.habitat, bird_idx) {
+                actions.append(&mut action_res.immediate_actions);
+                end_of_turn_actions.append(&mut action_res.end_of_turn_actions);
+            }
         }
 
         // Actions are pushed onto back of the queue, so reverse to match order of actions

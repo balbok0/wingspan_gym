@@ -34,21 +34,30 @@ pub enum Action {
     // Cache food of choice N times on specific bird.
     CacheFoodChoice(Box<[(FoodIndex, u8)]>, Habitat, usize),
 
-    // Non-standard actions
-    MoveBird(BirdCard, Vec<Habitat>),
 
     // Wrapper actions
     DoThen(Box<Action>, Box<Action>),
     Option(Box<Action>),
     MultipleActions(Vec<Action>),
 
+    // Special cases
+
+    // Move a bird from one habitat to another. It's for cards with "when this card is rightmost in X"
+    MoveBird(BirdCard, Vec<Habitat>),
+
     // Change Player allows for a temporary change of a player.
     // This typically sandwiches 1 action with Change Player to temp -> Do Action -> Change Player back
     ChangePlayer(usize),
 
-    // Allows to choose a starting player
-    // TODO: We need to pass in FnMut here I think?
-    // ChoosePlayer,
+    // Allows to choose an "index" of a thing (typically a starting player, or a bird to copy something from)
+    // It is tied to the BirdCard::after_choice_callback function
+    // First field size size of action choice (i.e. num of choices, and everything else is what is needed to call the callback)
+    #[allow(clippy::enum_variant_names)]
+    ChooseThenAction(u8, BirdCard, Habitat, usize),
+
+    // From a specified set of cards, get a card by index and increase idx of a player
+    // This occurs in AmericanOystercatcher case, and written for that case
+    GetCardFromSetAndChangePlayer(Vec<BirdCard>),
 }
 
 impl Action {
@@ -88,13 +97,13 @@ impl Action {
                 Ok(())
             },
             Action::PlayBird | Action::PlayBirdHabitat(_) => {
-                let (bird_card, _habitat, _bird_idx, mut followup_actions) = env.current_player_mut().play_a_bird_card(action_idx)?;
+                let (bird_card, habitat, bird_idx, mut followup_actions) = env.current_player_mut().play_a_bird_card(action_idx)?;
 
                 if bird_card.color() == &BirdCardColor::White {
                     // TODO: After all (from core) of the BirdCard actions are implemented, do uncomment below
-                    // let mut action_result = bird_card.activate(env, &habitat, bird_idx).unwrap();
-                    // env.append_actions(&mut action_result.end_of_turn_actions);
-                    // env.append_actions(&mut action_result.immediate_actions);
+                    let mut action_result = bird_card.activate(env, &habitat, bird_idx).unwrap();
+                    env.append_actions(&mut action_result.end_of_turn_actions);
+                    env.append_actions(&mut action_result.immediate_actions);
                 }
 
                 env.append_actions(&mut followup_actions);
@@ -233,7 +242,30 @@ impl Action {
                 }
                 env.set_current_player(*player_idx);
                 Ok(())
-            }
+            },
+            Action::ChooseThenAction(choice_size, bird_card, habitat, bird_idx) => {
+                if action_idx >= *choice_size {
+                    return Err(WingError::InvalidAction);
+                }
+                let mut action_result = bird_card.after_choice_callback(action_idx, env, habitat, *bird_idx)?;
+                env.append_actions(&mut action_result.end_of_turn_actions);
+                env.append_actions(&mut action_result.immediate_actions);
+                Ok(())
+            },
+            Action::GetCardFromSetAndChangePlayer(cards) => {
+                let action_idx = action_idx as usize;
+                if action_idx >= cards.len() {
+                    return Err(WingError::InvalidAction);
+                }
+
+                env.current_player_mut().add_bird_card(cards.remove(action_idx));
+                env.increment_player_idx();
+
+                if !cards.is_empty() {
+                    env.push_action(Action::GetCardFromSetAndChangePlayer(cards.to_owned()));
+                }
+                Ok(())
+            },
             // x => {
             //     println!("Action not implemented: {:?}", x);
             //     todo!()
@@ -251,7 +283,7 @@ impl Action {
             Action::GetFoodFromSupplyChoice(_) => true,
             Action::GetEgg => env.current_player().get_mat().can_place_egg(),
             Action::GetEggAtLoc(_, _, _) => self.action_space_size(env) > 0,
-            Action::GetEggChoice(_) => self.valid_actions(env).len() > 0,
+            Action::GetEggChoice(_) => !self.valid_actions(env).is_empty(),
             Action::GetBirdCard | Action::GetBirdCardFromDeck => env.current_player().get_bird_cards().len() < env.config().hand_limit.into(),
             Action::DiscardFoodOrBirdCard => Action::DiscardFood.is_performable(env) || Action::DiscardBirdCard.is_performable(env),
             Action::DiscardBirdCard | Action::TuckBirdCard(_, _) => env.current_player().can_discard_bird_card(),
@@ -266,7 +298,7 @@ impl Action {
                     .unwrap_or(true)
             },
             Action::DiscardEgg => env.current_player().get_mat().can_discard_egg(),
-            Action::DiscardEggChoice(_) => self.valid_actions(env).len() > 0,
+            Action::DiscardEggChoice(_) => !self.valid_actions(env).is_empty(),
             Action::TuckBirdCardFromDeck(_, _) => true,
             Action::CacheFoodChoice(_, _, _) => true,
             Action::MoveBird(_, _) => {
@@ -276,6 +308,8 @@ impl Action {
             Action::Option(action) => action.is_performable(env),
             Action::MultipleActions(_) => true,
             Action::ChangePlayer(player_idx) => *player_idx < env.config().num_players,
+            Action::ChooseThenAction(choice_size, _, _, _) => *choice_size > 0,
+            Action::GetCardFromSetAndChangePlayer(cards) => !cards.is_empty(),
         }
     }
 
@@ -330,6 +364,8 @@ impl Action {
             Action::Option(_) => 2,
             Action::MultipleActions(_) => 1,
             Action::ChangePlayer(_) => 1,
+            Action::ChooseThenAction(choice_size, _, _, _) => *choice_size as usize,
+            Action::GetCardFromSetAndChangePlayer(cards) => cards.len(),
         }
     }
 
@@ -420,6 +456,7 @@ impl Action {
                 | Action::CacheFoodChoice(_, _, _)
                 | Action::MultipleActions(_)
                 | Action::ChangePlayer(_)
+                | Action::GetCardFromSetAndChangePlayer(_)
                 => {
                 (0..self.action_space_size(env) as u8).collect()
             },
@@ -430,6 +467,7 @@ impl Action {
                     vec![0]
                 }
             },
+            Action::ChooseThenAction(choice_size, _, _, _) => (0..*choice_size).collect(),
         }
     }
 }
