@@ -1844,7 +1844,7 @@ impl BirdCard {
             _ => return Err(WingError::InvalidBird(format!("Bird {self:?} was called in conditional callback path, but it doesn't invoke such."))),
           };
 
-          env.append_actions(&mut vec![
+          env.prepend_actions(&mut [
             Action::ChangePlayer(env.current_player_idx()),
             Action::GetFoodFromSupplyChoice(food_choice),
             Action::ChangePlayer(bird_player_idx),
@@ -1895,11 +1895,31 @@ impl BirdCard {
       },
       Self::HornedLark => {
         // when another player plays a bird in their [grassland], tuck 1 [card] from your hand behind this bird.
-        todo!()
+        if last_bird_played_in_habitat(env, action_type_taken, action_taken, &Habitat::Grassland) {
+          env.append_actions(&mut vec![
+            Action::ChangePlayer(env.current_player_idx()),
+            Action::TuckBirdCard(*bird_habitat, bird_idx),
+            Action::ChangePlayer(bird_player_idx),
+          ]);
+
+          Ok(true)
+        } else {
+          Ok(false)
+        }
       },
       Self::EasternKingbird => {
         // when another player plays a bird in their [forest], gain 1 [invertebrate] from the supply.
-        todo!()
+        if last_bird_played_in_habitat(env, action_type_taken, action_taken, &Habitat::Forest) {
+          env.append_actions(&mut vec![
+            Action::ChangePlayer(env.current_player_idx()),
+            Action::GetFoodFromSupplyChoice(Box::new([FoodIndex::Invertebrate])),
+            Action::ChangePlayer(bird_player_idx),
+          ]);
+
+          Ok(true)
+        } else {
+          Ok(false)
+        }
       },
       Self::AsianKoel => {
         // when another player takes the "lay eggs" action, this bird lays 1 [egg] on another bird with a [platform] nest. you may go 3 over its egg limit while using this power.
@@ -1911,7 +1931,17 @@ impl BirdCard {
       },
       Self::BeltedKingfisher => {
         // when another player plays a bird in their [wetland], gain 1 [fish] from the supply.
-        todo!()
+        if last_bird_played_in_habitat(env, action_type_taken, action_taken, &Habitat::Wetland) {
+          env.append_actions(&mut vec![
+            Action::ChangePlayer(env.current_player_idx()),
+            Action::GetFoodFromSupplyChoice(Box::new([FoodIndex::Fish])),
+            Action::ChangePlayer(bird_player_idx),
+          ]);
+
+          Ok(true)
+        } else {
+          Ok(false)
+        }
       },
       Self::SpangledDrongo => {
         // when another player gains [nectar], gain 1 [nectar] from the supply.
@@ -2026,6 +2056,23 @@ impl BirdCard {
       _ => Err(WingError::InvalidBird(format!("Bird {self:?} was called in callback, but it doesn't invoke such."))),
     }
   }
+}
+
+
+fn last_bird_played_in_habitat(
+    env: &mut WingspanEnv,
+    action_type_taken: &Action,
+    action_taken: u8,
+    bird_habitat: &Habitat,
+) -> bool {
+    *action_type_taken == Action::PlayBirdHabitat(*bird_habitat)
+    || (
+      *action_type_taken == Action::PlayBird
+      && env.current_player().get_playable_card_hab_combos()
+        .get(action_taken as usize)
+        .map(|x| x.1 == *bird_habitat)
+        .unwrap_or(false)
+    )
 }
 
 
