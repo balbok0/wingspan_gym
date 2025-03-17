@@ -1863,10 +1863,7 @@ impl BirdCard {
         // when another player takes the "lay eggs" action, lay 1 [egg] on a bird with a [NEST TYPE] nest.
         if *action_type_taken == Action::ChooseAction && action_taken == 1 {
           // Text includes "on another bird"
-          let remove_self = match self {
-            Self::BarrowsGoldeneye => true,
-            _ => false
-          };
+          let remove_self = matches!(self, Self::BarrowsGoldeneye);
 
           let nest_type = match self {
             Self::BronzedCowbird
