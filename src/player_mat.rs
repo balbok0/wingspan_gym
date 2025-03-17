@@ -1,4 +1,4 @@
-use crate::{action::Action, bird_card::{BirdCard, BirdCardColor}, error::{WingError, WingResult}, food::FoodIndex, habitat::Habitat, wingspan_env::WingspanEnv};
+use crate::{action::Action, bird_card::{BirdCard, BirdCardColor}, error::{WingError, WingResult}, food::FoodIndex, habitat::Habitat, nest::NestType, wingspan_env::WingspanEnv};
 
 type BirdResourceRow = [u8; 5];
 
@@ -471,6 +471,23 @@ impl PlayerMat {
 
     pub fn egg_count(&self) -> u8 {
         self.num_eggs()
+    }
+
+    pub fn get_birds_with_nest_type(&self, nest_type: NestType) -> Vec<(Habitat, usize)> {
+        self.rows()
+            .map(|r| r.get_birds())
+            .iter()
+            .zip([Habitat::Forest, Habitat::Grassland, Habitat::Wetland])
+            .flat_map(|(bc, row_idx)| bc.iter().enumerate().map(move |(bird_idx, bc)| (row_idx, bird_idx, bc)))
+            .filter_map(|(row_idx, bird_idx, bc)| {
+                let cur_nest_type = bc.nest_type();
+                if cur_nest_type == &nest_type || cur_nest_type == &NestType::Wild {
+                Some((row_idx, bird_idx))
+                } else {
+                None
+                }
+            })
+            .collect()
     }
 }
 

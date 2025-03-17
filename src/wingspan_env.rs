@@ -259,6 +259,12 @@ impl WingspanEnv {
         self._action_queue.append(actions)
     }
 
+    pub fn prepend_actions(&mut self, actions: &mut Vec<Action>) {
+        // Appends actions to the top of the stack (it is a LIFO queue)
+        // Note that hence first element of actions will become the last action to be taken this round
+        self._action_queue.splice(..0, actions.into_iter().map(|x| x.clone()));
+    }
+
     pub fn push_callback(&mut self, callback: BirdCardCallback) {
         self._callbacks.push(callback)
     }
