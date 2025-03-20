@@ -1,19 +1,20 @@
 use rand::{rngs::StdRng, Rng};
 
-use crate::{action::Action, error::{WingError, WingResult}, food::FoodIndex};
+use crate::{
+    action::Action,
+    error::{WingError, WingResult},
+    food::FoodIndex,
+};
 
 fn sample_dice(rng: &mut StdRng, num_times: usize) -> Vec<u8> {
     (0..num_times).map(|_| rng.gen_range(0..6u8)).collect()
 }
 
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct BirdFeeder {
     dice_in_birdfeeder: Vec<u8>,
     dice_out_birdfeeder: Vec<u8>,
 }
-
-
 
 #[derive(Debug, Clone)]
 pub(crate) enum BirdFeederActionResult {
@@ -27,11 +28,16 @@ impl BirdFeeder {
         self.dice_in_birdfeeder = sample_dice(rng, 5);
     }
 
-    pub fn take_dice_and_update_state(&mut self, rng: &mut StdRng, idx: u8, action: Action) -> WingResult<BirdFeederActionResult> {
+    pub fn take_dice_and_update_state(
+        &mut self,
+        rng: &mut StdRng,
+        idx: u8,
+        action: Action,
+    ) -> WingResult<BirdFeederActionResult> {
         let idx = idx as usize;
 
         match idx.cmp(&self.dice_in_birdfeeder.len()) {
-            std::cmp::Ordering::Less => {},
+            std::cmp::Ordering::Less => {}
             std::cmp::Ordering::Equal => {
                 // Action equal to size of bird-feeder is a re-roll
                 if self.can_reroll() {
@@ -44,7 +50,7 @@ impl BirdFeeder {
                     // Reroll is not valid. This is not a performable action
                     return Err(WingError::InvalidAction);
                 }
-            },
+            }
             std::cmp::Ordering::Greater => return Err(WingError::InvalidAction),
         }
 
@@ -53,11 +59,14 @@ impl BirdFeeder {
         self.dice_out_birdfeeder.push(dice_face);
 
         // Update state of env
-        let result = match dice_face {
-            0..=4 => BirdFeederActionResult::GainFood(FoodIndex::from(dice_face)),
-            5 => BirdFeederActionResult::FollowupAction(Action::GetFoodFromSupplyChoice(Box::new([FoodIndex::Seed, FoodIndex::Invertebrate]))),
-            _ => panic!("Incorrect dice face: {}", dice_face),
-        };
+        let result =
+            match dice_face {
+                0..=4 => BirdFeederActionResult::GainFood(FoodIndex::from(dice_face)),
+                5 => BirdFeederActionResult::FollowupAction(Action::GetFoodFromSupplyChoice(
+                    Box::new([FoodIndex::Seed, FoodIndex::Invertebrate]),
+                )),
+                _ => panic!("Incorrect dice face: {}", dice_face),
+            };
 
         Ok(result)
     }
@@ -68,7 +77,8 @@ impl BirdFeeder {
             FoodIndex::Invertebrate | FoodIndex::Seed => vec![food_idx as u8, 5],
         };
 
-        self.dice_in_birdfeeder.iter()
+        self.dice_in_birdfeeder
+            .iter()
             .filter(|d| allowed_dice.contains(*d))
             .count()
     }
@@ -79,14 +89,17 @@ impl BirdFeeder {
             FoodIndex::Invertebrate | FoodIndex::Seed => vec![food_idx as u8, 5],
         };
 
-        let dice_to_remove = self.dice_in_birdfeeder.iter().enumerate()
-            .filter_map(|(idx, d)|
+        let dice_to_remove = self
+            .dice_in_birdfeeder
+            .iter()
+            .enumerate()
+            .filter_map(|(idx, d)| {
                 if allowed_dice.contains(d) {
                     Some(idx)
                 } else {
                     None
                 }
-            )
+            })
             .next();
 
         let dice_to_remove = dice_to_remove.ok_or(WingError::InvalidAction)?;
@@ -114,7 +127,10 @@ impl BirdFeeder {
             FoodIndex::Rodent => vec![4],
         };
 
-        self.dice_in_birdfeeder.iter().filter(|dice_idx| dice_idxs.contains(dice_idx)).count()
+        self.dice_in_birdfeeder
+            .iter()
+            .filter(|dice_idx| dice_idxs.contains(dice_idx))
+            .count()
     }
 
     pub fn roll_all_dice_not_in_birdfeeder(&self, rng: &mut StdRng) -> Vec<u8> {

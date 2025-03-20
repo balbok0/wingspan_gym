@@ -1,7 +1,14 @@
-use crate::{action::Action, bird_card::{BirdCard, BirdCardColor}, error::{WingError, WingResult}, food::FoodIndex, habitat::Habitat, nest::NestType, wingspan_env::WingspanEnv};
+use crate::{
+    action::Action,
+    bird_card::{BirdCard, BirdCardColor},
+    error::{WingError, WingResult},
+    food::FoodIndex,
+    habitat::Habitat,
+    nest::NestType,
+    wingspan_env::WingspanEnv,
+};
 
 type BirdResourceRow = [u8; 5];
-
 
 #[derive(Debug, Clone)]
 pub struct MatRow {
@@ -42,7 +49,6 @@ impl MatRow {
         Some(*self.birds.get(*self.bird_col_idxs.get(idx)?)?)
     }
 
-
     pub fn get_bird_actions(&self, env: &mut WingspanEnv) -> (Vec<Action>, Vec<Action>) {
         let mut actions = vec![];
         let mut end_of_turn_actions = vec![];
@@ -50,10 +56,10 @@ impl MatRow {
         // Iterate through birds from right to left
         for (bird_idx, bird) in self.birds.iter().enumerate().rev() {
             if bird.color() != &BirdCardColor::Brown {
-                continue
+                continue;
             }
 
-            if let Ok(mut action_res) =  bird.activate(env, &self.habitat, bird_idx) {
+            if let Ok(mut action_res) = bird.activate(env, &self.habitat, bird_idx) {
                 actions.append(&mut action_res.immediate_actions);
                 end_of_turn_actions.append(&mut action_res.end_of_turn_actions);
             }
@@ -64,20 +70,21 @@ impl MatRow {
     }
 
     pub fn num_spots_to_place_eggs(&self) -> usize {
-        self.eggs.iter()
+        self.eggs
+            .iter()
             .zip(self.eggs_cap.iter())
             .filter(|(eggs, cap)| eggs < cap)
             .count()
     }
 
     pub fn num_spots_to_discard_eggs(&self) -> usize {
-        self.eggs.iter()
-            .filter(|eggs| **eggs > 0)
-            .count()
+        self.eggs.iter().filter(|eggs| **eggs > 0).count()
     }
 
     pub fn can_place_egg(&self, bird_idx: usize, egg_cap_override: u8) -> bool {
-        bird_idx < self.eggs.len() && bird_idx < self.eggs_cap.len() && self.eggs_cap[bird_idx] + egg_cap_override > self.eggs[bird_idx]
+        bird_idx < self.eggs.len()
+            && bird_idx < self.eggs_cap.len()
+            && self.eggs_cap[bird_idx] + egg_cap_override > self.eggs[bird_idx]
     }
 
     pub fn can_discard_egg(&self, bird_idx: usize) -> bool {
@@ -93,7 +100,7 @@ impl MatRow {
                 if count == idx {
                     // This is the requested spot
                     self.eggs[bird_idx] += 1;
-                    return Ok(())
+                    return Ok(());
                 } else {
                     // Not yet the requested spot
                     count += 1;
@@ -113,7 +120,11 @@ impl MatRow {
         self.place_egg_at_exact_bird_idx(bird_idx, 0)
     }
 
-    pub fn place_egg_at_exact_bird_idx(&mut self, bird_idx: usize, egg_cap_override: u8) -> WingResult<()> {
+    pub fn place_egg_at_exact_bird_idx(
+        &mut self,
+        bird_idx: usize,
+        egg_cap_override: u8,
+    ) -> WingResult<()> {
         if self.can_place_egg(bird_idx, egg_cap_override) {
             self.eggs[bird_idx] += 1;
             Ok(())
@@ -132,7 +143,7 @@ impl MatRow {
                 if count == idx {
                     // This is the requested spot
                     self.eggs[col_idx] -= 1;
-                    return Ok(())
+                    return Ok(());
                 } else {
                     // Not yet the requested spot
                     count += 1;
@@ -173,7 +184,7 @@ impl MatRow {
         &self.tucked_cards
     }
 
-    pub fn play_a_bird(&mut self, bird_card: BirdCard) -> WingResult<()>{
+    pub fn play_a_bird(&mut self, bird_card: BirdCard) -> WingResult<()> {
         // Get indexes to insert at
         let birds_idx = self.birds.len();
 
@@ -189,17 +200,16 @@ impl MatRow {
 
         match bird_card {
             BirdCard::CommonBlackbird
-                | BirdCard::EuropeanRoller
-                | BirdCard::GreyHeron
-                | BirdCard::LongTailedTit => {
-                    // They are played side-ways. Unless it is the last column
-                    if self.bird_col_idxs.len() < 5 {
-                        self.bird_col_idxs.push(birds_idx);
-                        self.next_col_to_play += 1;
-                    }
+            | BirdCard::EuropeanRoller
+            | BirdCard::GreyHeron
+            | BirdCard::LongTailedTit => {
+                // They are played side-ways. Unless it is the last column
+                if self.bird_col_idxs.len() < 5 {
+                    self.bird_col_idxs.push(birds_idx);
+                    self.next_col_to_play += 1;
                 }
+            }
             _ => {}
-
         }
 
         Ok(())
@@ -245,7 +255,6 @@ impl MatRow {
 
 #[cfg(test)]
 impl MatRow {
-
     #[allow(clippy::too_many_arguments)]
     pub fn new_test(
         habitat: Habitat,
@@ -290,29 +299,17 @@ impl Default for PlayerMat {
 impl PlayerMat {
     pub fn get_row(&self, habitat: &Habitat) -> &MatRow {
         match habitat {
-            Habitat::Forest => {
-                &self.forest
-            },
-            Habitat::Grassland => {
-                &self.grassland
-            },
-            Habitat::Wetland => {
-                &self.wetland
-            },
+            Habitat::Forest => &self.forest,
+            Habitat::Grassland => &self.grassland,
+            Habitat::Wetland => &self.wetland,
         }
     }
 
     pub fn get_row_mut(&mut self, habitat: &Habitat) -> &mut MatRow {
         match habitat {
-            Habitat::Forest => {
-                &mut self.forest
-            },
-            Habitat::Grassland => {
-                &mut self.grassland
-            },
-            Habitat::Wetland => {
-                &mut self.wetland
-            },
+            Habitat::Forest => &mut self.forest,
+            Habitat::Grassland => &mut self.grassland,
+            Habitat::Wetland => &mut self.wetland,
         }
     }
 
@@ -323,33 +320,40 @@ impl PlayerMat {
 
         (0..num_columns)
             .map(|col_idx| {
-                [bird_cards[0].get(col_idx), bird_cards[1].get(col_idx), bird_cards[2].get(col_idx)]
+                [
+                    bird_cards[0].get(col_idx),
+                    bird_cards[1].get(col_idx),
+                    bird_cards[2].get(col_idx),
+                ]
             })
             .collect()
     }
 
     pub fn playable_habitats(&self, card: &BirdCard) -> Vec<Habitat> {
+        card.habitats()
+            .iter()
+            .filter(|habitat| {
+                let hab_row = self.get_row(habitat);
 
-        card.habitats().iter().filter(|habitat| {
-            let hab_row = self.get_row(habitat);
+                if let Some(col) = hab_row.col_to_play() {
+                    // There is a place in habitat.
+                    // Check if we have enough eggs
+                    let egg_req = (col + 1) / 2;
 
-            if let Some(col) = hab_row.col_to_play() {
-                // There is a place in habitat.
-                // Check if we have enough eggs
-                let egg_req = (col + 1) / 2;
+                    if egg_req > self.num_eggs() {
+                        // Not enough eggs
+                        return false;
+                    }
 
-                if egg_req > self.num_eggs() {
-                    // Not enough eggs
-                    return false;
+                    // Eggs are satisfied and there is a place
+                    true
+                } else {
+                    // No place in a habitat
+                    false
                 }
-
-                // Eggs are satisfied and there is a place
-                true
-            } else {
-                // No place in a habitat
-                false
-            }
-        }).cloned().collect()
+            })
+            .cloned()
+            .collect()
     }
 
     pub fn get_actions_from_habitat_action(&self, habitat: &Habitat) -> Vec<Action> {
@@ -358,11 +362,8 @@ impl PlayerMat {
 
         let mut result = vec![Action::BirdActionFromHabitat(*habitat)];
 
-        let num_actions = if habitat == &Habitat::Grassland  {
-            2
-        } else {
-            1
-        } + hab_row.get_birds().len() / 2;
+        let num_actions =
+            if habitat == &Habitat::Grassland { 2 } else { 1 } + hab_row.get_birds().len() / 2;
 
         result.extend((0..num_actions).map(|_| hab_action.clone()));
 
@@ -374,11 +375,17 @@ impl PlayerMat {
     }
 
     pub fn num_spots_to_place_eggs(&self) -> usize {
-        self.rows().map(MatRow::num_spots_to_place_eggs).iter().sum()
+        self.rows()
+            .map(MatRow::num_spots_to_place_eggs)
+            .iter()
+            .sum()
     }
 
     pub fn num_spots_to_discard_eggs(&self) -> usize {
-        self.rows().map(MatRow::num_spots_to_discard_eggs).iter().sum()
+        self.rows()
+            .map(MatRow::num_spots_to_discard_eggs)
+            .iter()
+            .sum()
     }
 
     pub fn move_bird(&mut self, bird_card: BirdCard, target_habitat: Habitat) -> WingResult<()> {
@@ -386,11 +393,19 @@ impl PlayerMat {
             return Err(WingError::InvalidAction);
         }
 
-        let (source_habitat, bird_idx) = self.find_bird(&bird_card).ok_or(WingError::InvalidAction)?;
+        let (source_habitat, bird_idx) =
+            self.find_bird(&bird_card).ok_or(WingError::InvalidAction)?;
 
-        let (bird_card, tucked_cards, cached_food, eggs, eggs_cap) = self.get_row_mut(&source_habitat).remove_bird(bird_idx);
+        let (bird_card, tucked_cards, cached_food, eggs, eggs_cap) =
+            self.get_row_mut(&source_habitat).remove_bird(bird_idx);
 
-        self.get_row_mut(&target_habitat).add_bird_from_entry(bird_card, tucked_cards, cached_food, eggs, eggs_cap)?;
+        self.get_row_mut(&target_habitat).add_bird_from_entry(
+            bird_card,
+            tucked_cards,
+            cached_food,
+            eggs,
+            eggs_cap,
+        )?;
 
         Ok(())
     }
@@ -398,7 +413,7 @@ impl PlayerMat {
     fn find_bird(&self, bird_card: &BirdCard) -> Option<(Habitat, usize)> {
         for row in self.rows() {
             if let Some(bird_idx) = row.birds.iter().position(|bc| bc == bird_card) {
-                return Some((row.habitat, bird_idx))
+                return Some((row.habitat, bird_idx));
             }
         }
         None
@@ -437,11 +452,17 @@ impl PlayerMat {
     }
 
     pub fn num_eggs(&self) -> u8 {
-        self.rows().iter().flat_map(|mat_row| mat_row.eggs.iter()).sum()
+        self.rows()
+            .iter()
+            .flat_map(|mat_row| mat_row.eggs.iter())
+            .sum()
     }
 
     pub fn eggs_cap(&self) -> u8 {
-        self.rows().iter().flat_map(|mat_row| mat_row.eggs_cap.iter()).sum()
+        self.rows()
+            .iter()
+            .flat_map(|mat_row| mat_row.eggs_cap.iter())
+            .sum()
     }
 
     pub fn can_place_egg(&self) -> bool {
@@ -452,10 +473,14 @@ impl PlayerMat {
         self.num_eggs() > 0
     }
 
-    pub fn put_bird_card(&mut self, bird_card: BirdCard, habitat: &Habitat) -> WingResult<Vec<Action>> {
+    pub fn put_bird_card(
+        &mut self,
+        bird_card: BirdCard,
+        habitat: &Habitat,
+    ) -> WingResult<Vec<Action>> {
         let row = self.get_row_mut(habitat);
         if row.get_birds().len() >= 5 {
-            return Err(WingError::InvalidAction)
+            return Err(WingError::InvalidAction);
         }
 
         let egg_cost = (row.col_to_play().unwrap() + 1) / 2;
@@ -478,13 +503,17 @@ impl PlayerMat {
             .map(|r| r.get_birds())
             .iter()
             .zip([Habitat::Forest, Habitat::Grassland, Habitat::Wetland])
-            .flat_map(|(bc, row_idx)| bc.iter().enumerate().map(move |(bird_idx, bc)| (row_idx, bird_idx, bc)))
+            .flat_map(|(bc, row_idx)| {
+                bc.iter()
+                    .enumerate()
+                    .map(move |(bird_idx, bc)| (row_idx, bird_idx, bc))
+            })
             .filter_map(|(row_idx, bird_idx, bc)| {
                 let cur_nest_type = bc.nest_type();
                 if cur_nest_type == &nest_type || cur_nest_type == &NestType::Wild {
-                Some((row_idx, bird_idx))
+                    Some((row_idx, bird_idx))
                 } else {
-                None
+                    None
                 }
             })
             .collect()
@@ -493,11 +522,7 @@ impl PlayerMat {
 
 #[cfg(test)]
 impl PlayerMat {
-    pub fn new_test(
-        forest: MatRow,
-        grassland: MatRow,
-        wetland: MatRow,
-    ) -> Self {
+    pub fn new_test(forest: MatRow, grassland: MatRow, wetland: MatRow) -> Self {
         Self {
             forest,
             grassland,

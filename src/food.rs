@@ -13,7 +13,7 @@ pub type Foods = [u8; 5];
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum CostAlternative {
     Yes,
-    No
+    No,
 }
 
 // Total food cost
@@ -48,7 +48,7 @@ impl From<u8> for FoodIndex {
             2 => FoodIndex::Fish,
             3 => FoodIndex::Fruit,
             4 => FoodIndex::Rodent,
-            x => panic!("Got {x} for FoodIndex which is more than max value of 4.")
+            x => panic!("Got {x} for FoodIndex which is more than max value of 4."),
         }
     }
 }

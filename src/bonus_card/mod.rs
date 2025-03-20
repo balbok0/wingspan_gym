@@ -10,8 +10,6 @@ use strum::IntoEnumIterator as _;
 
 use crate::expansion::Expansion;
 
-
-
 pub(crate) fn get_deck(expansions: &[Expansion]) -> Vec<BonusCard> {
     if expansions.len() != 1 && expansions.first().unwrap() != &Expansion::Core {
         todo!("Only core is supported so far. Expansions add new logic which we have not implemented yet.")

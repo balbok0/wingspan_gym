@@ -13,7 +13,7 @@ impl From<usize> for Habitat {
             0 => Habitat::Forest,
             1 => Habitat::Grassland,
             2 => Habitat::Wetland,
-            x => panic!("Got habitat idx {x}, but only 0, 1, 2 are allowed.")
+            x => panic!("Got habitat idx {x}, but only 0, 1, 2 are allowed."),
         }
     }
 }
@@ -35,9 +35,15 @@ impl Habitat {
 
     pub fn optional_action(&self) -> Action {
         match self {
-            Habitat::Forest => Action::DoThen(Box::new(Action::DiscardBirdCard), Box::new(Action::GetFood)),
-            Habitat::Grassland => Action::DoThen(Box::new(Action::DiscardFood), Box::new(Action::GetEgg)),
-            Habitat::Wetland => Action::DoThen(Box::new(Action::DiscardEgg), Box::new(Action::GetBirdCard)),
+            Habitat::Forest => {
+                Action::DoThen(Box::new(Action::DiscardBirdCard), Box::new(Action::GetFood))
+            }
+            Habitat::Grassland => {
+                Action::DoThen(Box::new(Action::DiscardFood), Box::new(Action::GetEgg))
+            }
+            Habitat::Wetland => {
+                Action::DoThen(Box::new(Action::DiscardEgg), Box::new(Action::GetBirdCard))
+            }
         }
     }
 }
