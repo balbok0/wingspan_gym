@@ -17,7 +17,7 @@ pub enum Action {
     GetFoodFromSupplyChoice(Box<[FoodIndex]>),
     GetEgg,
     GetEggAtLoc(Habitat, usize, usize),
-    GetEggChoice(Box<[(Habitat, usize)]>),
+    GetEggChoice(Box<[(Habitat, usize)]>, EggCapacityOverride),
     GetBirdCard,
     GetBirdCardFromDeck,
 
@@ -129,19 +129,19 @@ impl Action {
             Action::GetEggAtLoc(habitat, bird_idx, num_eggs) => {
                 for _ in 0..*num_eggs {
                     // Ignore errors, since some eggs might have succeeded. If user makes bad moves let them
-                    let _ = env.current_player_mut().get_mat_mut().get_row_mut(habitat).place_egg_at_exact_bird_idx(*bird_idx);
+                    let _ = env.current_player_mut().get_mat_mut().get_row_mut(habitat).place_egg_at_exact_bird_idx(*bird_idx, 0);
                 }
 
                 Ok(())
             },
-            Action::GetEggChoice(choices) => {
+            Action::GetEggChoice(choices, egg_cap_override) => {
                 let action_idx = action_idx as usize;
                 if action_idx >= choices.len() {
                     Err(WingError::InvalidAction)
                 } else {
                     let (habitat, bird_idx) = choices[action_idx];
                     // TODO: Potentially check here if needed.
-                    env.current_player_mut().get_mat_mut().get_row_mut(&habitat).place_egg_at_exact_bird_idx(bird_idx)
+                    env.current_player_mut().get_mat_mut().get_row_mut(&habitat).place_egg_at_exact_bird_idx(bird_idx, (*egg_cap_override).into())
                 }
             },
             Action::GetBirdCard => {
@@ -283,7 +283,7 @@ impl Action {
             Action::GetFoodFromSupplyChoice(_) => true,
             Action::GetEgg => env.current_player().get_mat().can_place_egg(),
             Action::GetEggAtLoc(_, _, _) => self.action_space_size(env) > 0,
-            Action::GetEggChoice(_) => !self.valid_actions(env).is_empty(),
+            Action::GetEggChoice(_, _) => !self.valid_actions(env).is_empty(),
             Action::GetBirdCard | Action::GetBirdCardFromDeck => env.current_player().get_bird_cards().len() < env.config().hand_limit.into(),
             Action::DiscardFoodOrBirdCard => Action::DiscardFood.is_performable(env) || Action::DiscardBirdCard.is_performable(env),
             Action::DiscardBirdCard | Action::TuckBirdCard(_, _) => env.current_player().can_discard_bird_card(),
@@ -337,7 +337,7 @@ impl Action {
                     0
                 }
             },
-            Action::GetEggChoice(choices) => choices.len(),
+            Action::GetEggChoice(choices, _) => choices.len(),
             Action::GetBirdCard => env._bird_deck.num_actions(),
             Action::GetBirdCardFromDeck => 1,
             Action::DiscardFoodOrBirdCard => {
@@ -415,10 +415,10 @@ impl Action {
                     })
                     .collect()
             },
-            Action::GetEggChoice(choices) => {
+            Action::GetEggChoice(choices, egg_cap_override) => {
                 choices.iter().enumerate()
                     .filter_map(|(choice_idx, (habitat, bird_idx ))| {
-                        if env.current_player().get_mat().get_row(habitat).can_place_egg(*bird_idx) {
+                        if env.current_player().get_mat().get_row(habitat).can_place_egg(*bird_idx, egg_cap_override.into()) {
                             Some(choice_idx as u8)
                         } else {
                             None
@@ -494,5 +494,37 @@ impl From<&Action> for PyAction {
 impl PyAction {
     pub fn __str__(&self) -> String {
         format!("{:?}", self.inner)
+    }
+}
+
+// Helper things for Specific actions
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum EggCapacityOverride {
+    None,
+    Over(u8)
+}
+
+
+impl Default for EggCapacityOverride {
+    fn default() -> Self {
+        Self::None
+    }
+}
+
+impl From<EggCapacityOverride> for u8 {
+    fn from(value: EggCapacityOverride) -> Self {
+        match value {
+            EggCapacityOverride::None => 0,
+            EggCapacityOverride::Over(val) => val,
+        }
+    }
+}
+
+impl From<&EggCapacityOverride> for u8 {
+    fn from(value: &EggCapacityOverride) -> Self {
+        match value {
+            EggCapacityOverride::None => 0,
+            EggCapacityOverride::Over(val) => *val,
+        }
     }
 }

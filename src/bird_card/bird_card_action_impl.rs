@@ -1,7 +1,7 @@
 use strum::IntoEnumIterator;
 
 use super::BirdCard;
-use crate::{action::Action, bird_card::BirdCardColor, bird_card_callback::BirdCardCallback, error::{WingError, WingResult}, food::FoodIndex, habitat::Habitat, nest::NestType, wingspan_env::WingspanEnv};
+use crate::{action::{Action, EggCapacityOverride}, bird_card::BirdCardColor, bird_card_callback::BirdCardCallback, error::{WingError, WingResult}, food::FoodIndex, habitat::Habitat, nest::NestType, wingspan_env::WingspanEnv};
 
 #[derive(Debug)]
 #[derive(Default)]
@@ -114,7 +114,7 @@ impl BirdCard {
         | Self::NorthernBobwhite
         | Self::ScaledQuail => {
         // lay 1 [egg] on this bird.
-        env.current_player_mut().get_mat_mut().get_row_mut(habitat).place_egg_at_exact_bird_idx(bird_idx)?;
+        env.current_player_mut().get_mat_mut().get_row_mut(habitat).place_egg_at_exact_bird_idx(bird_idx, 0)?;
         Ok(Default::default())
       },
       Self::CommonIora => {
@@ -642,7 +642,7 @@ impl BirdCard {
 
         let idxs = env.current_player().get_mat().get_birds_with_nest_type(goal_nest_type);
         for (row_idx, bird_idx) in idxs {
-          let _ = env.current_player_mut().get_mat_mut().get_row_mut(&row_idx).place_egg_at_exact_bird_idx(bird_idx);
+          let _ = env.current_player_mut().get_mat_mut().get_row_mut(&row_idx).place_egg_at_exact_bird_idx(bird_idx, 0);
         }
 
         Ok(Default::default())
@@ -949,7 +949,7 @@ impl BirdCard {
           for habitat in [Habitat::Forest, Habitat::Grassland, Habitat::Wetland] {
             let row = mat.get_row(&habitat);
             for (bird_idx, bird_card) in row.get_birds().iter().enumerate() {
-              if bird_card.nest_type() == &nest_type && row.can_place_egg(bird_idx) {
+              if bird_card.nest_type() == &nest_type && row.can_place_egg(bird_idx, 0) {
                 playable_birds.push((habitat, bird_idx));
               }
             }
@@ -958,10 +958,10 @@ impl BirdCard {
           // If there are birds that satisfy condition, add actions for that
           if !playable_birds.is_empty() {
             if player_idx == cur_player_idx {
-              actions.push(Action::GetEggChoice(playable_birds.clone().into_boxed_slice()));
-              actions.push(Action::GetEggChoice(playable_birds.into_boxed_slice()));
+              actions.push(Action::GetEggChoice(playable_birds.clone().into_boxed_slice(), EggCapacityOverride::None));
+              actions.push(Action::GetEggChoice(playable_birds.into_boxed_slice(), EggCapacityOverride::None));
             } else {
-              actions.push(Action::GetEggChoice(playable_birds.into_boxed_slice()));
+              actions.push(Action::GetEggChoice(playable_birds.into_boxed_slice(), EggCapacityOverride::None));
             }
             actions.push(Action::ChangePlayer(player_idx));
           }
@@ -1856,26 +1856,41 @@ impl BirdCard {
         }
       },
       Self::BronzedCowbird
+        | Self::AsianKoel
         | Self::BrownHeadedCowbird
         | Self::YellowBilledCuckoo
         | Self::BarrowsGoldeneye
-        | Self::AmericanAvocet => {
+        | Self::AmericanAvocet
+        | Self::CommonCuckoo => {
         // when another player takes the "lay eggs" action, lay 1 [egg] on a bird with a [NEST TYPE] nest.
         if *action_type_taken == Action::ChooseAction && action_taken == 1 {
           // Text includes "on another bird"
-          let remove_self = matches!(self, Self::BarrowsGoldeneye);
+          let remove_self = matches!(self, Self::BarrowsGoldeneye | Self::CommonCuckoo);
+          let egg_cap_override = match self {
+            Self::AsianKoel => EggCapacityOverride::Over(3),
+            _ => EggCapacityOverride::None,
+          };
 
-          let nest_type = match self {
+          let nest_type: Vec<NestType> = match self {
             Self::BronzedCowbird
               | Self::BrownHeadedCowbird
-              | Self::YellowBilledCuckoo => NestType::Bowl,
-            Self::AmericanAvocet => NestType::Ground,
-            Self::BarrowsGoldeneye => NestType::Cavity,
+              | Self::YellowBilledCuckoo => vec![NestType::Bowl],
+            Self::AmericanAvocet => vec![NestType::Ground],
+            Self::BarrowsGoldeneye => vec![NestType::Cavity],
+            Self::AsianKoel => vec![NestType::Platform],
+            Self::CommonCuckoo => vec![NestType::Bowl, NestType::Ground],
             _ => return Err(WingError::InvalidBird(format!("Bird {self:?} was called in conditional callback path, but it doesn't invoke such."))),
           };
 
           let bird_player = env.get_player(bird_player_idx);
-          let mut choices = bird_player.get_mat().get_birds_with_nest_type(nest_type);
+          let mat = bird_player.get_mat();
+          let mut choices: Vec<_> = nest_type
+            .iter()
+            .flat_map(|nt| bird_player.get_mat().get_birds_with_nest_type(*nt))
+            .filter(|(habitat, bird_idx)| {
+              mat.get_row(habitat).can_place_egg(*bird_idx, egg_cap_override.into())
+            })
+            .collect();
 
           if remove_self {
             if let Some(idx) = choices.iter().position(|val | *val == (*bird_habitat, bird_idx)) {
@@ -1885,7 +1900,7 @@ impl BirdCard {
 
           env.append_actions(&mut vec![
             Action::ChangePlayer(env.current_player_idx()),
-            Action::GetEggChoice(choices.into_boxed_slice()),
+            Action::GetEggChoice(choices.into_boxed_slice(), egg_cap_override),
             Action::ChangePlayer(bird_player_idx),
           ]);
           Ok(true)
@@ -1921,13 +1936,19 @@ impl BirdCard {
           Ok(false)
         }
       },
-      Self::AsianKoel => {
-        // when another player takes the "lay eggs" action, this bird lays 1 [egg] on another bird with a [platform] nest. you may go 3 over its egg limit while using this power.
-        todo!()
-      },
       Self::SnowBunting => {
         // when another player tucks a [card] for any reason, tuck 1 [card] from your hand behind this bird, then draw 1 [card] at the end of their turn.
-        todo!()
+        let satisfies_condition = matches!(action_type_taken, Action::TuckBirdCard(_, _) | Action::TuckBirdCardFromDeck(_, _));
+
+        if satisfies_condition {
+          env.prepend_actions(&mut [
+            Action::ChangePlayer(env.current_player_idx()),
+            Action::DoThen(Box::new(Action::TuckBirdCard(*bird_habitat, bird_idx)), Box::new(Action::GetBirdCard)),
+            Action::ChangePlayer(bird_player_idx),
+          ]);
+        }
+
+        Ok(satisfies_condition)
       },
       Self::BeltedKingfisher => {
         // when another player plays a bird in their [wetland], gain 1 [fish] from the supply.
@@ -1951,10 +1972,6 @@ impl BirdCard {
         // when another player takes the "gain food" action, if they gain any number of [rodent], cache 1 [rodent] from the supply on this bird.
         todo!()
       },
-      Self::CommonCuckoo => {
-        // when another player takes the "lay eggs" action, this bird lays 1 [egg] on another bird with a [bowl] or [ground] nest.
-        todo!()
-      },
       Self::BlackVulture
         | Self::BlackBilledMagpie
         | Self::TurkeyVulture => {
@@ -1963,7 +1980,17 @@ impl BirdCard {
       },
       Self::EuropeanGoldfinch => {
         // when another player tucks a [card] for any reason, tuck 1 [card] from the deck behind this bird.
-        todo!()
+        let satisfies_condition = matches!(action_type_taken, Action::TuckBirdCard(_, _) | Action::TuckBirdCardFromDeck(_, _));
+
+        if satisfies_condition {
+          env.append_actions(&mut vec![
+            Action::ChangePlayer(env.current_player_idx()),
+            Action::TuckBirdCardFromDeck(*bird_habitat, bird_idx),
+            Action::ChangePlayer(bird_player_idx),
+          ]);
+        }
+
+        Ok(satisfies_condition)
       },
       Self::PheasantCoucal => {
         // when another player takes the "lay eggs" action, lay 1 [egg] on this bird.
@@ -1978,13 +2005,50 @@ impl BirdCard {
           Ok(false)
         }
       },
-      Self::HorsfieldsBronzeCuckoo => {
-        // when another player takes the "lay eggs" action, lay 1 [egg] on a bird with a wingspan less than 30cm.
-        todo!()
-      },
-      Self::VioletCuckoo => {
-        // when another player takes the "lay eggs" action, lay 1 [egg] on another bird with wingspan less than 30 cm. you may go 2 over its egg limit while using this power.
-        todo!()
+      Self::HorsfieldsBronzeCuckoo | Self::VioletCuckoo => {
+        // when another player takes the "lay eggs" action, lay 1 [egg] on another bird with wingspan less than 30 cm.
+        // [Violet only] you may go 2 over its egg limit while using this power.
+        let satisfies_condition = matches!(action_type_taken, Action::GetEgg | Action::GetEggAtLoc(_, _, _) | Action::GetEggChoice(_, _));
+
+        if satisfies_condition {
+          let egg_cap_override = match self {
+            Self::HorsfieldsBronzeCuckoo => EggCapacityOverride::None,
+            Self::VioletCuckoo => EggCapacityOverride::Over(2),
+            _ => return Err(WingError::InvalidBird(format!("Bird {self:?} was called in conditional callback path, but it was not expected in it."))),
+          };
+
+          let bird_player = env.get_player(bird_player_idx);
+          let mat = bird_player.get_mat();
+
+          let bird_choices: Box<[(Habitat, usize)]> = bird_player.get_birds_on_mat()
+            .iter().zip([Habitat::Forest, Habitat::Grassland, Habitat::Wetland])
+            .flat_map(|(row, hab)| row.iter().enumerate().map(move |(bc_idx, bc)| (bc_idx, hab, bc)))
+            .filter_map(|(bc_idx, hab, bc)| {
+              if
+                // Wingspan check
+                bc.wingspan().map(|wingspan| wingspan < 30).unwrap_or(true)
+                // Verify that egg can be placed
+                && mat.get_row(&hab).can_place_egg(bc_idx, egg_cap_override.into())
+                // Check "another bird" part
+                && !(bc_idx == bird_idx && hab == *bird_habitat)
+              {
+                Some((hab, bc_idx))
+              } else {
+                None
+              }
+            })
+            .collect();
+
+          if !bird_choices.is_empty() {
+            env.append_actions(&mut vec![
+              Action::ChangePlayer(env.current_player_idx()),
+              Action::GetEggChoice(bird_choices, egg_cap_override),
+              Action::ChangePlayer(bird_player_idx),
+            ]);
+          }
+        }
+
+        Ok(satisfies_condition)
       },
       _ => Err(WingError::InvalidBird(format!("Bird {self:?} was called in callback, but it doesn't invoke such."))),
     }

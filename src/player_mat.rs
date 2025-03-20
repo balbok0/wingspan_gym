@@ -76,8 +76,8 @@ impl MatRow {
             .count()
     }
 
-    pub fn can_place_egg(&self, bird_idx: usize) -> bool {
-        bird_idx < self.eggs.len() && bird_idx < self.eggs_cap.len() && self.eggs_cap[bird_idx] > self.eggs[bird_idx]
+    pub fn can_place_egg(&self, bird_idx: usize, egg_cap_override: u8) -> bool {
+        bird_idx < self.eggs.len() && bird_idx < self.eggs_cap.len() && self.eggs_cap[bird_idx] + egg_cap_override > self.eggs[bird_idx]
     }
 
     pub fn can_discard_egg(&self, bird_idx: usize) -> bool {
@@ -110,11 +110,11 @@ impl MatRow {
             None => return Err(WingError::InvalidAction),
         };
 
-        self.place_egg_at_exact_bird_idx(bird_idx)
+        self.place_egg_at_exact_bird_idx(bird_idx, 0)
     }
 
-    pub fn place_egg_at_exact_bird_idx(&mut self, bird_idx: usize) -> WingResult<()> {
-        if self.can_place_egg(bird_idx) {
+    pub fn place_egg_at_exact_bird_idx(&mut self, bird_idx: usize, egg_cap_override: u8) -> WingResult<()> {
+        if self.can_place_egg(bird_idx, egg_cap_override) {
             self.eggs[bird_idx] += 1;
             Ok(())
         } else {
