@@ -62,6 +62,10 @@ impl MatRow {
             if let Ok(mut action_res) = bird.activate(env, &self.habitat, bird_idx) {
                 actions.append(&mut action_res.immediate_actions);
                 end_of_turn_actions.append(&mut action_res.end_of_turn_actions);
+
+                if action_res.was_successful && bird.is_predator() {
+                    env.predator_succeeded();
+                }
             }
         }
 

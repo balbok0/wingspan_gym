@@ -42,7 +42,12 @@ pub struct WingspanEnv {
     pub(crate) _bird_feeder: BirdFeeder,
     _action_queue: Vec<Action>,
     _callbacks: HashMap<usize, HashSet<BirdCardCallback>>, // List of callback items to go through.
-    _active_callbacks: HashMap<usize, HashSet<BirdCardCallback>>, // List of callback items to go through.
+    // List of currently active callbacks (i.e. callbacks - callbacks that already executed)
+    _active_callbacks: HashMap<usize, HashSet<BirdCardCallback>>,
+
+    // Some cards specifically require checking if a predator action succeeds or not.
+    // It's a unique dynamic in Wingspan so ok to have this done this way IMO
+    pub(crate) _predator_succeeded: bool,
 }
 
 impl WingspanEnv {
@@ -64,6 +69,7 @@ impl WingspanEnv {
             _action_queue: Vec::with_capacity(50), // 50 seems like a reasonable upper bound even for most intense chains?
             _callbacks: Default::default(),
             _active_callbacks: Default::default(),
+            _predator_succeeded: false,
         };
         env.reset(None);
 
@@ -113,6 +119,7 @@ impl WingspanEnv {
 
     fn end_of_turn(&mut self) {
         self._bird_deck.refill_display();
+        self._predator_succeeded = false;
     }
 
     fn end_of_round(&mut self) {
@@ -158,6 +165,9 @@ impl WingspanEnv {
             if let Some(callbacks) = self._active_callbacks.get_mut(&player_idx) {
                 for cb in callbacks_to_remove {
                     callbacks.remove(&cb);
+                    if cb.card.is_predator() {
+                        self._predator_succeeded = true;
+                    }
                 }
             }
         }
@@ -349,6 +359,10 @@ impl WingspanEnv {
             .entry(callback.card_player_idx)
             .or_default()
             .insert(callback);
+    }
+
+    pub fn predator_succeeded(&mut self) {
+        self._predator_succeeded = true;
     }
 }
 

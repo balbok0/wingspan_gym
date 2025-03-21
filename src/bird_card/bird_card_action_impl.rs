@@ -2128,7 +2128,7 @@ impl BirdCard {
             }
             Self::HornedLark => {
                 // when another player plays a bird in their [grassland], tuck 1 [card] from your hand behind this bird.
-                if last_bird_played_in_habitat(
+                if is_last_bird_played_in_habitat(
                     env,
                     action_type_taken,
                     action_taken,
@@ -2147,7 +2147,7 @@ impl BirdCard {
             }
             Self::EasternKingbird => {
                 // when another player plays a bird in their [forest], gain 1 [invertebrate] from the supply.
-                if last_bird_played_in_habitat(
+                if is_last_bird_played_in_habitat(
                     env,
                     action_type_taken,
                     action_taken,
@@ -2186,7 +2186,7 @@ impl BirdCard {
             }
             Self::BeltedKingfisher => {
                 // when another player plays a bird in their [wetland], gain 1 [fish] from the supply.
-                if last_bird_played_in_habitat(
+                if is_last_bird_played_in_habitat(
                     env,
                     action_type_taken,
                     action_taken,
@@ -2213,7 +2213,17 @@ impl BirdCard {
             }
             Self::BlackVulture | Self::BlackBilledMagpie | Self::TurkeyVulture => {
                 // when another player's [predator] succeeds, gain 1 [die] from the birdfeeder.
-                todo!()
+                if env._predator_succeeded {
+                    env.append_actions(&mut vec![
+                        Action::ChangePlayer(env.current_player_idx()),
+                        Action::GetFood,
+                        Action::ChangePlayer(bird_player_idx),
+                    ]);
+
+                    return Ok(true);
+                }
+
+                Ok(false)
             }
             Self::EuropeanGoldfinch => {
                 // when another player tucks a [card] for any reason, tuck 1 [card] from the deck behind this bird.
@@ -2248,10 +2258,7 @@ impl BirdCard {
             Self::HorsfieldsBronzeCuckoo | Self::VioletCuckoo => {
                 // when another player takes the "lay eggs" action, lay 1 [egg] on another bird with wingspan less than 30 cm.
                 // [Violet only] you may go 2 over its egg limit while using this power.
-                let satisfies_condition = matches!(
-                    action_type_taken,
-                    Action::GetEgg | Action::GetEggAtLoc(_, _, _) | Action::GetEggChoice(_, _)
-                );
+                let satisfies_condition = *action_type_taken == Action::ChooseAction && action_taken == 1;
 
                 if satisfies_condition {
                     let egg_cap_override = match self {
@@ -2391,7 +2398,7 @@ impl BirdCard {
     }
 }
 
-fn last_bird_played_in_habitat(
+fn is_last_bird_played_in_habitat(
     env: &mut WingspanEnv,
     action_type_taken: &Action,
     action_taken: u8,
