@@ -44,10 +44,11 @@ class WingspanEnv(gym.Env):
         return self._inner.round_idx
 
     def _debug_print_state(self):
-        round_idx, player_idx, action, players = self._inner._debug_get_state()
+        round_idx, player_idx, action, players, callbacks = self._inner._debug_get_state()
         print(f"Current round: {round_idx}")
         print(f"Current player: {player_idx}")
         print(f"Next Action: {action}")
+        print(f"Callbacks: {callbacks}")
 
         print("Cur player's hand:")
         self._print_player(players[player_idx])

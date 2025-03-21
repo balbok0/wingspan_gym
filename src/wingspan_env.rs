@@ -1,3 +1,5 @@
+use std::collections::{HashMap, HashSet};
+
 use derive_builder::Builder;
 use rand::{rngs::StdRng, seq::SliceRandom, SeedableRng};
 
@@ -33,12 +35,14 @@ pub struct WingspanEnv {
     pub(crate) rng: StdRng,
     _round_idx: i8,
     _player_idx: usize,
+    _cur_turn_player_idx: usize,
     pub(crate) _bird_deck: DeckAndHolder,
     _bonus_deck: Vec<BonusCard>,
     _players: Vec<Player>,
     pub(crate) _bird_feeder: BirdFeeder,
     _action_queue: Vec<Action>,
-    _callbacks: Vec<BirdCardCallback>, // List of callback items to go through.
+    _callbacks: HashMap<usize, HashSet<BirdCardCallback>>, // List of callback items to go through.
+    _active_callbacks: HashMap<usize, HashSet<BirdCardCallback>>, // List of callback items to go through.
 }
 
 impl WingspanEnv {
@@ -47,14 +51,19 @@ impl WingspanEnv {
         let mut env = WingspanEnv {
             config,
             rng: StdRng::from_entropy(),
+            // Round index. [0, 3] are normal turns. -1 indicates game setup
             _round_idx: -1,
+            // Player currently taking an action
             _player_idx: 0,
+            // Player whose turn it currently is
+            _cur_turn_player_idx: 0,
             _bird_deck: Default::default(),
             _bonus_deck: Default::default(),
             _bird_feeder: Default::default(),
             _players: Vec::with_capacity(num_players),
             _action_queue: Vec::with_capacity(50), // 50 seems like a reasonable upper bound even for most intense chains?
             _callbacks: Default::default(),
+            _active_callbacks: Default::default(),
         };
         env.reset(None);
 
@@ -109,6 +118,7 @@ impl WingspanEnv {
     fn end_of_round(&mut self) {
         self._round_idx += 1;
         self._player_idx = self._round_idx as usize % self.config.num_players;
+        self._player_idx = self._round_idx as usize % self.config.num_players;
 
         // TODO: End of round abilities
         // TODO: End of round goals
@@ -118,6 +128,41 @@ impl WingspanEnv {
             player.set_turns_left(8 - self._round_idx as u8);
         }
         self._bird_deck.reset_display();
+    }
+
+    fn check_callbacks(&mut self, action: &Action, action_idx: u8) -> WingResult<()> {
+        for player_idx in 0..self.config.num_players {
+            if player_idx == self._cur_turn_player_idx {
+                continue;
+            }
+
+            let mut callbacks_to_remove = vec![];
+            if let Some(callbacks) = self._active_callbacks.get(&player_idx) {
+                // This clone hurts. Maybe there is a better way to do it?
+                for callback in callbacks.clone().iter() {
+                    let callback_successful = callback.card.conditional_callback(
+                        self,
+                        action,
+                        action_idx,
+                        &callback.habitat,
+                        callback.card_idx,
+                        callback.card_player_idx
+                    )?;
+
+                    if callback_successful {
+                        callbacks_to_remove.push(callback.clone())
+                    }
+                }
+            }
+
+            if let Some(callbacks) = self._active_callbacks.get_mut(&player_idx) {
+                for cb in callbacks_to_remove {
+                    callbacks.remove(&cb);
+                }
+            }
+        }
+
+        Ok(())
     }
 
     pub fn step(&mut self, action_idx: u8) -> WingResult<StepResult> {
@@ -137,6 +182,7 @@ impl WingspanEnv {
             self.push_action(action);
             return Err(e);
         };
+        self.check_callbacks(&action, action_idx)?;
 
         // Ensure that next action can be performed
         while !self._action_queue.is_empty() {
@@ -160,17 +206,31 @@ impl WingspanEnv {
 
         // Handle end of turn for the player
         if self._action_queue.is_empty() {
-            // Loop through players
-            self._player_idx += 1;
+            // Re-activate current players callbacks
+            self._active_callbacks.entry(self._player_idx).insert_entry(
+                self._callbacks
+                    .get(&self._player_idx)
+                    .cloned()
+                    .unwrap_or(HashSet::new()),
+            );
+
+            // Go to next player
+            self.increment_player_idx();
+
+            // Clear their callbacks
+            self._active_callbacks
+                .entry(self._player_idx)
+                .and_modify(|v| v.clear());
 
             // Special case is first round
             if self._round_idx == -1 {
-                if self._player_idx == self.config.num_players {
+                if self._player_idx == 0 {
                     // Setup is done from players side.
                     self.post_init_player_setup();
 
                     // TODO: Finish it here and then make it round 0
                     self._round_idx = 0;
+                    self._cur_turn_player_idx = 0;
                     self._player_idx = 0;
                     for player in self._players.iter_mut() {
                         player.set_turns_left(8);
@@ -249,8 +309,10 @@ impl WingspanEnv {
     }
 
     pub fn increment_player_idx(&mut self) {
-        self._player_idx += 1;
-        self._player_idx %= self.config.num_players;
+        self._cur_turn_player_idx += 1;
+        self._cur_turn_player_idx %= self.config.num_players;
+
+        self._player_idx = self._cur_turn_player_idx;
     }
 
     pub fn action_space_size(&self) -> Option<usize> {
@@ -276,14 +338,17 @@ impl WingspanEnv {
     }
 
     pub fn prepend_actions(&mut self, actions: &mut [Action]) {
-        // Appends actions to the top of the stack (it is a LIFO queue)
+        // Appends actions to the bottom of the stack (it is a LIFO queue)
         // Note that hence first element of actions will become the last action to be taken this round
         self._action_queue
             .splice(..0, actions.iter_mut().map(|x| x.clone()));
     }
 
     pub fn push_callback(&mut self, callback: BirdCardCallback) {
-        self._callbacks.push(callback)
+        self._callbacks
+            .entry(callback.card_player_idx)
+            .or_default()
+            .insert(callback);
     }
 }
 
@@ -342,7 +407,7 @@ impl PyWingspanEnv {
         slf.borrow().inner.action_space_size()
     }
 
-    pub fn _debug_get_state(slf: &Bound<'_, Self>) -> (i8, usize, Option<String>, Vec<Player>) {
+    pub fn _debug_get_state(slf: &Bound<'_, Self>) -> (i8, usize, Option<String>, Vec<Player>, HashMap<usize, HashSet<BirdCardCallback>>) {
         let inner = &slf.borrow().inner;
 
         (
@@ -350,6 +415,7 @@ impl PyWingspanEnv {
             inner._player_idx,
             inner._action_queue.last().map(|x| format!("{x:?}")),
             inner._players.clone(),
+            inner._active_callbacks.clone(),
         )
     }
 

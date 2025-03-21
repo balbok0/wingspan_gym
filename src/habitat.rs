@@ -1,6 +1,6 @@
 use crate::action::Action;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Habitat {
     Forest,
     Grassland,

@@ -10,7 +10,7 @@ use crate::{
     nest::NestType,
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, EnumIter)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, EnumIter, Hash)]
 pub enum BirdCard {
     AbbottsBooby,
     AcornWoodpecker,
