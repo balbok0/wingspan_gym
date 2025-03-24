@@ -2209,7 +2209,16 @@ impl BirdCard {
             }
             Self::LoggerheadShrike => {
                 // when another player takes the "gain food" action, if they gain any number of [rodent], cache 1 [rodent] from the supply on this bird.
-                todo!()
+                if
+                    env._turn_action_taken == 1
+                    && env.current_turn_player().get_foods()[FoodIndex::Rodent as usize] > env._food_at_start_of_turn[FoodIndex::Rodent as usize]
+                {
+                    let row = env.get_player_mut(bird_player_idx).get_mat_mut().get_row_mut(bird_habitat);
+                    row.cache_food(bird_idx, FoodIndex::Rodent);
+
+                    return Ok(true);
+                }
+                Ok(false)
             }
             Self::BlackVulture | Self::BlackBilledMagpie | Self::TurkeyVulture => {
                 // when another player's [predator] succeeds, gain 1 [die] from the birdfeeder.

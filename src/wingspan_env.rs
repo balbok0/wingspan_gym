@@ -6,17 +6,7 @@ use rand::{rngs::StdRng, seq::SliceRandom, SeedableRng};
 use pyo3::{exceptions::PyValueError, prelude::*};
 
 use crate::{
-    action::{Action, PyAction},
-    bird_card::get_deck as get_birds_deck,
-    bird_card_callback::BirdCardCallback,
-    bird_feeder::BirdFeeder,
-    bonus_card::{get_deck as get_bonus_deck, BonusCard},
-    deck_and_holder::DeckAndHolder,
-    error::{WingError, WingResult},
-    expansion::Expansion,
-    habitat::Habitat,
-    player::Player,
-    step_result::StepResult,
+    action::{Action, PyAction}, bird_card::get_deck as get_birds_deck, bird_card_callback::BirdCardCallback, bird_feeder::BirdFeeder, bonus_card::{get_deck as get_bonus_deck, BonusCard}, deck_and_holder::DeckAndHolder, error::{WingError, WingResult}, expansion::Expansion, food::Foods, habitat::Habitat, player::Player, step_result::StepResult
 };
 
 #[derive(Debug, Builder, Clone)]
@@ -48,6 +38,11 @@ pub struct WingspanEnv {
     // Some cards specifically require checking if a predator action succeeds or not.
     // It's a unique dynamic in Wingspan so ok to have this done this way IMO
     pub(crate) _predator_succeeded: bool,
+
+    // Specifically needed for Self::LoggerheadShrike
+    // Needs to keep track of state across the turn
+    pub(crate) _turn_action_taken: u8,
+    pub(crate) _food_at_start_of_turn: Foods,
 }
 
 impl WingspanEnv {
@@ -70,6 +65,8 @@ impl WingspanEnv {
             _callbacks: Default::default(),
             _active_callbacks: Default::default(),
             _predator_succeeded: false,
+            _turn_action_taken: Default::default(),
+            _food_at_start_of_turn: Default::default(),
         };
         env.reset(None);
 
@@ -117,14 +114,15 @@ impl WingspanEnv {
         self._bird_deck.reset_display();
     }
 
-    fn end_of_turn(&mut self) {
+    fn start_of_turn(&mut self) {
         self._bird_deck.refill_display();
         self._predator_succeeded = false;
+
+        self._food_at_start_of_turn = *self.current_player().get_foods();
     }
 
     fn end_of_round(&mut self) {
         self._round_idx += 1;
-        self._player_idx = self._round_idx as usize % self.config.num_players;
         self._player_idx = self._round_idx as usize % self.config.num_players;
 
         // TODO: End of round abilities
@@ -177,7 +175,6 @@ impl WingspanEnv {
 
     pub fn step(&mut self, action_idx: u8) -> WingResult<StepResult> {
         if self._round_idx == 4 {
-            println!("Action queue: {:?}", self._action_queue);
             // We have terminated / End of round
             return Ok(StepResult::Terminated);
         }
@@ -192,6 +189,11 @@ impl WingspanEnv {
             self.push_action(action);
             return Err(e);
         };
+
+        // Update action here to keep track of what is going on this turn
+        if matches!(action, Action::ChooseAction) {
+            self._turn_action_taken = action_idx;
+        }
         self.check_callbacks(&action, action_idx)?;
 
         // Ensure that next action can be performed
@@ -268,7 +270,7 @@ impl WingspanEnv {
                     }
                 } else {
                     // End of normal turn
-                    self.end_of_turn();
+                    self.start_of_turn();
                 }
                 self.push_action(Action::ChooseAction);
 
@@ -302,6 +304,11 @@ impl WingspanEnv {
         &self._players[player_idx % self._players.len()]
     }
 
+    pub fn get_player_mut(&mut self, player_idx: usize) -> &mut Player {
+        let player_idx = player_idx % self._players.len();
+        &mut self._players[player_idx]
+    }
+
     pub fn current_player(&self) -> &Player {
         &self._players[self._player_idx]
     }
@@ -312,6 +319,18 @@ impl WingspanEnv {
 
     pub fn current_player_idx(&self) -> usize {
         self._player_idx
+    }
+
+    pub fn current_turn_player(&self) -> &Player {
+        &self._players[self._cur_turn_player_idx]
+    }
+
+    pub fn current_turn_player_mut(&mut self) -> &mut Player {
+        &mut self._players[self._cur_turn_player_idx]
+    }
+
+    pub fn current_turn_player_idx(&self) -> usize {
+        self._cur_turn_player_idx
     }
 
     pub fn set_current_player(&mut self, idx: usize) {
@@ -421,6 +440,7 @@ impl PyWingspanEnv {
         slf.borrow().inner.action_space_size()
     }
 
+    #[allow(clippy::type_complexity)]
     pub fn _debug_get_state(slf: &Bound<'_, Self>) -> (i8, usize, Option<String>, Vec<Player>, HashMap<usize, HashSet<BirdCardCallback>>) {
         let inner = &slf.borrow().inner;
 
