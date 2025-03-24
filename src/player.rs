@@ -132,7 +132,7 @@ impl Player {
         Ok((
             bird_card,
             hab,
-            self.mat.get_row(&hab).get_birds().len(),
+            self.mat.get_row(&hab).get_birds().len() - 1,
             food_actions,
         ))
     }
