@@ -5,6 +5,9 @@ import random
 import wingspan_gym.game
 
 
+VERBOSE = True
+
+
 class DummyHeuristic:
     def __init__(self, env: wingspan_gym.game.WingspanEnv):
         self.env = env
@@ -41,14 +44,15 @@ episode_over = False
 max_steps = 10000
 step_idx = 0
 while not episode_over and step_idx < max_steps:
-    print("=========")
     step_idx += 1
     # action = env.action_space.sample()  # agent policy that uses the observation and info
-    print(env._debug_print_state())
 
     action = player[env.cur_player()].get_next_action()
-    print(f"Chose action: {action}")
-    print(f"Step: {step_idx}/{max_steps}")
+    if VERBOSE:
+        print("=========")
+        print(env._debug_print_state())
+        print(f"Chose action: {action}")
+        print(f"Step: {step_idx}/{max_steps}")
 
     if env.step(action) == StepResult.Terminated:
         break
