@@ -1,4 +1,7 @@
-use crate::{bird_card::BirdCard, error::{WingError, WingResult}};
+use crate::{
+    bird_card::BirdCard,
+    error::{WingError, WingResult},
+};
 
 #[derive(Default, Debug, Clone)]
 pub(crate) struct DeckAndHolder {
@@ -10,7 +13,7 @@ impl DeckAndHolder {
     pub fn new(deck: Vec<BirdCard>) -> Self {
         Self {
             _bird_deck: deck,
-            _face_up_display: vec![]
+            _face_up_display: vec![],
         }
     }
 
@@ -24,6 +27,10 @@ impl DeckAndHolder {
             let mut new_cards = self.draw_cards_from_deck(3 - self._face_up_display.len());
             self._face_up_display.append(&mut new_cards);
         }
+    }
+
+    pub fn get_display_cards(&self) -> &Vec<BirdCard> {
+        &self._face_up_display
     }
 
     pub fn draw_cards_from_deck(&mut self, num_cards: usize) -> Vec<BirdCard> {
@@ -42,8 +49,8 @@ impl DeckAndHolder {
                 } else {
                     None
                 }
-            },
-            _ => { return Err(WingError::InvalidAction) }
+            }
+            _ => return Err(WingError::InvalidAction),
         };
 
         result.ok_or(WingError::InvalidAction)

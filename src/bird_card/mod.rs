@@ -1,16 +1,14 @@
-
+mod bird_card_action_impl;
 pub mod bird_card_constants;
 pub mod bird_card_impl;
-mod bird_card_action_impl;
 
 use std::collections::HashSet;
 
-pub use bird_card_impl::*;
 pub use bird_card_constants::*;
+pub use bird_card_impl::*;
 use strum::IntoEnumIterator;
 
 use crate::{expansion::Expansion, food::Foods};
-
 
 pub(crate) fn get_deck(expansions: &[Expansion]) -> Vec<BirdCard> {
     if expansions.len() != 1 && expansions.first().unwrap() != &Expansion::Core {
@@ -33,19 +31,13 @@ pub(crate) fn is_enough_food_to_play_a_card(card: &BirdCard, player_food: &Foods
     }
 
     match is_cost_alt {
-        crate::food::CostAlternative::Yes => {
-            food_req.iter().zip(player_food).all(
-                |(req, res)| {
-                    req.map_or(false, |req| req <= *res)
-                }
-            )
-        },
-        crate::food::CostAlternative::No => {
-            food_req.iter().zip(player_food).all(
-                |(req, res)| {
-                    req.map_or(true, |req| req <= *res)
-                }
-            )
-        }
+        crate::food::CostAlternative::Yes => food_req
+            .iter()
+            .zip(player_food)
+            .all(|(req, res)| req.map_or(false, |req| req <= *res)),
+        crate::food::CostAlternative::No => food_req
+            .iter()
+            .zip(player_food)
+            .all(|(req, res)| req.map_or(true, |req| req <= *res)),
     }
 }

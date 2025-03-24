@@ -1,6 +1,13 @@
-use crate::{action::Action, bird_card::{is_enough_food_to_play_a_card, BirdCard}, bonus_card::BonusCard, error::{WingError, WingResult}, food::{FoodIndex, Foods}, habitat::Habitat, player_mat::PlayerMat};
+use crate::{
+    action::Action,
+    bird_card::{is_enough_food_to_play_a_card, BirdCard},
+    bonus_card::BonusCard,
+    error::{WingError, WingResult},
+    food::{FoodIndex, Foods},
+    habitat::Habitat,
+    player_mat::PlayerMat,
+};
 use pyo3::prelude::*;
-
 
 #[derive(Debug, Clone)]
 #[pyclass]
@@ -11,14 +18,14 @@ pub struct Player {
     bonus_cards: Vec<BonusCard>,
 
     #[pyo3(get)]
-    pub(crate)  turns_left: u8,
+    pub(crate) turns_left: u8,
 
     mat: PlayerMat,
 
     end_of_round_points: u8,
 
     // Optimization that uses a fact, that before every bird play we check for resources etc.
-    _playable_card_hab_combos: Vec<(BirdCard, Habitat, usize)>
+    _playable_card_hab_combos: Vec<(BirdCard, Habitat, usize)>,
 }
 
 impl Default for Player {
@@ -91,7 +98,8 @@ impl Player {
         let mut playable_cards = vec![];
         for (idx, card) in self.bird_cards.iter().enumerate() {
             if is_enough_food_to_play_a_card(card, &self.foods) {
-                let mut cur_card_habitat_combos: Vec<_> = self.mat
+                let mut cur_card_habitat_combos: Vec<_> = self
+                    .mat
                     .playable_habitats(card)
                     .into_iter()
                     .filter(|habitat| habitats.contains(habitat))
@@ -105,7 +113,10 @@ impl Player {
         !self._playable_card_hab_combos.is_empty()
     }
 
-    pub fn play_a_bird_card(&mut self, bird_card_idx: u8) -> WingResult<(BirdCard, Habitat, usize, Vec<Action>)> {
+    pub fn play_a_bird_card(
+        &mut self,
+        bird_card_idx: u8,
+    ) -> WingResult<(BirdCard, Habitat, usize, Vec<Action>)> {
         let bird_card_idx = bird_card_idx as usize;
         if bird_card_idx >= self._playable_card_hab_combos.len() {
             return Err(WingError::InvalidAction);
@@ -118,7 +129,12 @@ impl Player {
         self.bird_cards.remove(orig_card_idx);
 
         food_actions.append(&mut egg_actions);
-        Ok((bird_card, hab, self.mat.get_row(&hab).get_birds().len(), food_actions))
+        Ok((
+            bird_card,
+            hab,
+            self.mat.get_row(&hab).get_birds().len() - 1,
+            food_actions,
+        ))
     }
 
     fn pay_bird_cost(&mut self, bird_card: &BirdCard) -> WingResult<Vec<Action>> {
@@ -149,9 +165,11 @@ impl Player {
                     self.foods[food_idx as usize] -= food_cost;
                     vec![]
                 } else {
-                    vec![Action::DiscardFoodChoice(discard_options.into_boxed_slice())]
+                    vec![Action::DiscardFoodChoice(
+                        discard_options.into_boxed_slice(),
+                    )]
                 }
-            },
+            }
             crate::food::CostAlternative::No => {
                 // No Cost Alternative, so no choices needed
                 let mut total_defined_cost = 0;
@@ -163,7 +181,9 @@ impl Player {
                 }
 
                 // For all of the arbitrary costs, return actions needed
-                (0..total - total_defined_cost).map(|_| Action::DiscardFood).collect()
+                (0..total - total_defined_cost)
+                    .map(|_| Action::DiscardFood)
+                    .collect()
             }
         };
 
@@ -180,7 +200,8 @@ impl Player {
 
     pub fn calculate_points(&self) -> u8 {
         // Get points from birds
-        let bird_points: u8 = self.mat
+        let bird_points: u8 = self
+            .mat
             .rows()
             .iter()
             .map(|mat_row| mat_row.get_birds().iter().map(|b| b.points()).sum::<u8>())
@@ -190,25 +211,30 @@ impl Player {
         let egg_points = self.mat.egg_count();
 
         // Points from tucked cards
-        let tucked_cards: u8 = self.mat
+        let tucked_cards: u8 = self
+            .mat
             .rows()
             .iter()
             .map(|mat_row| mat_row.get_tucked_cards().iter().sum::<u8>())
             .sum();
 
         // Points from cached cards
-        let cached_food: u8 = self.mat
+        let cached_food: u8 = self
+            .mat
             .rows()
             .iter()
             .map(|mat_row| mat_row.get_cached_food().iter().flatten().sum::<u8>())
             .sum();
 
-        let bonus_points: u8 = self.bonus_cards
+        let bonus_points: u8 = self
+            .bonus_cards
             .iter()
             .map(|bc| {
                 let count = bc.get_count_of_matching(self) as u8;
                 match bc.scoring_rule() {
-                    crate::bonus_card::ScoringRule::Each(points_per_each) => points_per_each * count,
+                    crate::bonus_card::ScoringRule::Each(points_per_each) => {
+                        points_per_each * count
+                    }
                     crate::bonus_card::ScoringRule::Ladder(steps) => {
                         let mut points = 0;
                         let mut idx = 0;
@@ -222,7 +248,12 @@ impl Player {
             })
             .sum();
 
-        self.end_of_round_points + bird_points + bonus_points + egg_points + tucked_cards + cached_food
+        self.end_of_round_points
+            + bird_points
+            + bonus_points
+            + egg_points
+            + tucked_cards
+            + cached_food
     }
 
     pub fn add_bird_card(&mut self, bird_card: BirdCard) {
@@ -246,8 +277,7 @@ impl Player {
     }
 
     pub fn get_birds_on_mat(&self) -> [&Vec<BirdCard>; 3] {
-        self.mat.rows()
-            .map(|mr| mr.get_birds())
+        self.mat.rows().map(|mr| mr.get_birds())
     }
 
     pub fn get_bonus_cards(&self) -> &Vec<BonusCard> {
@@ -280,9 +310,24 @@ impl Player {
 
     pub fn birds_on_mat(&self) -> [Vec<u16>; 3] {
         [
-            self.mat.get_row(&Habitat::Forest).get_birds().iter().map(BirdCard::index).collect(),
-            self.mat.get_row(&Habitat::Grassland).get_birds().iter().map(BirdCard::index).collect(),
-            self.mat.get_row(&Habitat::Wetland).get_birds().iter().map(BirdCard::index).collect(),
+            self.mat
+                .get_row(&Habitat::Forest)
+                .get_birds()
+                .iter()
+                .map(BirdCard::index)
+                .collect(),
+            self.mat
+                .get_row(&Habitat::Grassland)
+                .get_birds()
+                .iter()
+                .map(BirdCard::index)
+                .collect(),
+            self.mat
+                .get_row(&Habitat::Wetland)
+                .get_birds()
+                .iter()
+                .map(BirdCard::index)
+                .collect(),
         ]
     }
 }
@@ -296,7 +341,7 @@ impl Player {
         turns_left: u8,
         mat: PlayerMat,
         end_of_round_points: u8,
-        _playable_card_hab_combos: Vec<(BirdCard, Habitat, usize)>
+        _playable_card_hab_combos: Vec<(BirdCard, Habitat, usize)>,
     ) -> Self {
         Self {
             foods,
