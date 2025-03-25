@@ -1,4 +1,5 @@
 use rand::{rngs::StdRng, Rng};
+use pyo3::prelude::*;
 
 use crate::{
     bird_card::{BeakDirection, BirdCardColor},
@@ -9,6 +10,13 @@ use crate::{
     wingspan_env::WingspanEnv,
 };
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[pyclass(eq, eq_int)]
+pub enum EndOfRoundScoring {
+    Competitive,
+    Friendly,
+}
+
 #[derive(Debug, Clone, Copy)]
 pub enum EndOfRoundGoal {
     // Core
@@ -18,9 +26,7 @@ pub enum EndOfRoundGoal {
     EggsInHabitat(Habitat),
     BirdsPlayedTotal, // Total on board
     SetsOfEggs,       // 1 = 1 egg in each habitat
-    /// [egg] in forest	core	1	3	5	7	[bird] in forest
-    /// [egg] in grassland	core	1	3	5	7	[bird] in grassland
-    /// [egg] in wetland	core	1	3	5	7	[bird] in wetland
+
     // European
     BirdsWithTuckedCards,
     BirdsInOneRow,
@@ -293,7 +299,7 @@ fn get_end_of_round_deck(expansions: &[Expansion]) -> Vec<Tile> {
     ];
 
     for (expansion, deck) in expansion_decks.iter() {
-        if expansions.contains(&expansion) {
+        if expansions.contains(expansion) {
             result.extend_from_slice(deck);
         }
     }

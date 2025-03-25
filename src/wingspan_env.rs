@@ -1,22 +1,27 @@
 use std::collections::{HashMap, HashSet};
 
 use derive_builder::Builder;
+use itertools::Itertools;
 use rand::{rngs::StdRng, seq::SliceRandom, SeedableRng};
 
 use pyo3::{exceptions::PyValueError, prelude::*};
 
 use crate::{
-    action::{Action, PyAction}, bird_card::get_deck as get_birds_deck, bird_card_callback::BirdCardCallback, bird_feeder::BirdFeeder, bonus_card::{get_deck as get_bonus_deck, BonusCard}, deck_and_holder::DeckAndHolder, error::{WingError, WingResult}, expansion::Expansion, food::Foods, habitat::Habitat, player::Player, step_result::StepResult
+    action::{Action, PyAction}, bird_card::get_deck as get_birds_deck, bird_card_callback::BirdCardCallback, bird_feeder::BirdFeeder, bonus_card::{get_deck as get_bonus_deck, BonusCard}, deck_and_holder::DeckAndHolder, end_of_round_goal::{sample_end_of_round_goals, EndOfRoundGoal, EndOfRoundScoring}, error::{WingError, WingResult}, expansion::Expansion, food::Foods, habitat::Habitat, player::Player, step_result::StepResult
 };
 
-#[derive(Debug, Builder, Clone)]
+#[derive(Debug, Builder, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct WingspanEnvConfig {
     #[builder(setter(into), default = 20)]
     pub(crate) hand_limit: u8,
     #[builder(setter(into), default = 2)]
     pub(crate) num_players: usize,
+    #[builder(setter(into), default = 4)]
+    pub(crate) num_rounds: usize,
     #[builder(default = vec![Expansion::Core])]
     expansions: Vec<Expansion>,
+    #[builder(setter(into), default = EndOfRoundScoring::Competitive)]
+    scoring_style: EndOfRoundScoring,
 }
 
 #[derive(Debug, Clone)]
@@ -28,6 +33,7 @@ pub struct WingspanEnv {
     _cur_turn_player_idx: usize,
     pub(crate) _bird_deck: DeckAndHolder,
     _bonus_deck: Vec<BonusCard>,
+    _end_of_round_goals: Vec<EndOfRoundGoal>,
     _players: Vec<Player>,
     pub(crate) _bird_feeder: BirdFeeder,
     _action_queue: Vec<Action>,
@@ -60,6 +66,7 @@ impl WingspanEnv {
             _bird_deck: Default::default(),
             _bonus_deck: Default::default(),
             _bird_feeder: Default::default(),
+            _end_of_round_goals: Default::default(),
             _players: Vec::with_capacity(num_players),
             _action_queue: Vec::with_capacity(50), // 50 seems like a reasonable upper bound even for most intense chains?
             _callbacks: Default::default(),
@@ -88,10 +95,9 @@ impl WingspanEnv {
         self._bird_deck = DeckAndHolder::new(deck);
         self._bonus_deck = get_bonus_deck(&self.config.expansions);
 
-        // TODO: Bonus cards for players
+        self._end_of_round_goals = sample_end_of_round_goals(self.config.expansions.as_slice(), self.config.num_rounds, &mut self.rng);
 
-        // Give each player foods
-
+        // Give each player cards
         for _ in 0..self.config.num_players {
             let player_bird_cards = self._bird_deck.draw_cards_from_deck(5);
             let player_bonus_cards = self._bonus_deck.split_off(self._bonus_deck.len() - 2);
@@ -104,9 +110,7 @@ impl WingspanEnv {
             // Five times make current user decide on what to do
             self.push_action(Action::DiscardFoodOrBirdCard);
         }
-        self.push_action(Action::DiscardBirdCard);
-
-        // TODO: 3 birds face-up
+        self.push_action(Action::DiscardBonusCard);
     }
 
     fn post_init_player_setup(&mut self) {
@@ -127,6 +131,11 @@ impl WingspanEnv {
 
         // TODO: End of round abilities
         // TODO: End of round goals
+        if self._round_idx > 0 {
+            let goal = self._end_of_round_goals[(self._round_idx - 1) as usize];
+
+            self.score_end_of_round_goal(&goal, (self._round_idx - 1) as usize);
+        }
 
         // Start of the new round
         for player in self._players.iter_mut() {
@@ -280,6 +289,71 @@ impl WingspanEnv {
         }
 
         Ok(StepResult::Live)
+    }
+
+    fn score_end_of_round_goal(&mut self, goal: &EndOfRoundGoal, round_to_score_idx: usize) {
+        // TODO: Implement also non-competitive scoring
+        let scores = (0..self._players.len()).map(|player_idx| (goal.get_num_matching(self, player_idx), player_idx)).sorted();
+
+        const COMPETITIVE_BASE_SCORES: [u8; 4] = [4, 1, 0, 0];
+        const COMPETITIVE_PER_ROUND_SCORE_ADDS: [u8; 4] = [1, 1, 1, 0];
+
+        let mut cur_score = 0;
+        let mut cur_players = vec![];
+
+        match self.config.scoring_style {
+            EndOfRoundScoring::Competitive => {
+                for (score_idx, (player_score, player_idx)) in scores.enumerate() {
+                    // First iter
+                    if score_idx == 0 {
+                        cur_score = player_score;
+                        cur_players.push(player_idx);
+                        continue;
+                    }
+
+                    // 0-score is always worth nothing
+                    if cur_score == 0 {
+                        break;
+                    }
+
+                    // More than 1 player with the same score
+                    if player_score == cur_score {
+                        cur_players.push(player_idx);
+                        continue;
+                    }
+
+                    // At this point scores are different
+
+                    // First process current queue
+                    let cur_score_idx = score_idx - cur_players.len();
+                    let total_pts: u8 =
+                        // Points from base score
+                        COMPETITIVE_BASE_SCORES[cur_score_idx..score_idx.min(4)].iter().sum::<u8>() +
+                        // They increase per round
+                        COMPETITIVE_PER_ROUND_SCORE_ADDS[cur_score_idx..score_idx.min(4)].iter().sum::<u8>() * (round_to_score_idx as u8)
+                    ;
+                    let pts_per_player = total_pts / cur_players.len() as u8;
+                    for cur_player_idx in cur_players.iter() {
+                        self.get_player_mut(*cur_player_idx).add_end_of_round_points(pts_per_player);
+                    }
+
+                    // Only up-to third place gets points.
+                    if score_idx > 2 {
+                        break;
+                    }
+
+                    // Keep track of new score and new player set
+                    cur_players.clear();
+                    cur_score = player_score;
+                    cur_players.push(player_idx);
+                }
+            },
+            EndOfRoundScoring::Friendly => {
+                for (player_score, player_idx) in scores {
+                    self.get_player_mut(player_idx).add_end_of_round_points(player_score.min(5) as u8);
+                }
+            }
+        }
     }
 
     pub fn populate_action_queue_from_habitat_action(&mut self, habitat: &Habitat) {
