@@ -288,6 +288,10 @@ impl Player {
         &self.foods
     }
 
+    pub fn add_end_of_round_points(&mut self, pts: u8) {
+        self.end_of_round_points += pts;
+    }
+
     pub fn get_mat(&self) -> &PlayerMat {
         &self.mat
     }

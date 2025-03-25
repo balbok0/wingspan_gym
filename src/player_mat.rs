@@ -502,7 +502,7 @@ impl PlayerMat {
         self.num_eggs()
     }
 
-    pub fn get_birds_with_nest_type(&self, nest_type: NestType) -> Vec<(Habitat, usize)> {
+    pub fn get_birds_with_nest_type(&self, nest_type: &NestType) -> Vec<(Habitat, usize)> {
         self.rows()
             .map(|r| r.get_birds())
             .iter()
@@ -514,7 +514,7 @@ impl PlayerMat {
             })
             .filter_map(|(row_idx, bird_idx, bc)| {
                 let cur_nest_type = bc.nest_type();
-                if cur_nest_type == &nest_type || cur_nest_type == &NestType::Wild {
+                if cur_nest_type == nest_type || cur_nest_type == &NestType::Wild {
                     Some((row_idx, bird_idx))
                 } else {
                     None

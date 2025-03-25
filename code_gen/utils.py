@@ -1,4 +1,6 @@
+import json
 from pathlib import Path
+from typing import Any
 
 import polars as pl
 import unidecode
@@ -6,6 +8,12 @@ import unidecode
 
 FOOD_TYPES = ["Invertebrate", "Seed", "Fish", "Fruit", "Rodent"]
 HABITATS = ["Forest", "Grassland", "Wetland"]
+
+
+def load_beak_json() -> list[dict[str, Any]]:
+    json_data = Path(__file__).parent.parent / "data/master.json"
+    with open(json_data, mode="rb") as f:
+        return json.load(f)
 
 
 def load_all_cards():

@@ -59,14 +59,33 @@ impl From<usize> for FoodIndex {
     }
 }
 
-impl From<FoodIndex> for u8 {
-    fn from(val: FoodIndex) -> Self {
-        match val {
-            FoodIndex::Invertebrate => 0,
-            FoodIndex::Seed => 1,
-            FoodIndex::Fish => 2,
-            FoodIndex::Fruit => 3,
-            FoodIndex::Rodent => 4,
+macro_rules! from_food_index_to_integer {
+    ($type_out:ty) => {
+        impl From<FoodIndex> for $type_out {
+            fn from(val: FoodIndex) -> Self {
+                match val {
+                    FoodIndex::Invertebrate => 0,
+                    FoodIndex::Seed => 1,
+                    FoodIndex::Fish => 2,
+                    FoodIndex::Fruit => 3,
+                    FoodIndex::Rodent => 4,
+                }
+            }
         }
-    }
+
+        impl From<&FoodIndex> for $type_out {
+            fn from(val: &FoodIndex) -> Self {
+                match *val {
+                    FoodIndex::Invertebrate => 0,
+                    FoodIndex::Seed => 1,
+                    FoodIndex::Fish => 2,
+                    FoodIndex::Fruit => 3,
+                    FoodIndex::Rodent => 4,
+                }
+            }
+        }
+    };
 }
+
+from_food_index_to_integer!(u8);
+from_food_index_to_integer!(usize);
