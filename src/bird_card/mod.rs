@@ -1,4 +1,5 @@
 mod bird_card_action_impl;
+mod bird_card_beak_impl;
 pub mod bird_card_constants;
 pub mod bird_card_impl;
 
@@ -6,6 +7,7 @@ use std::collections::HashSet;
 
 pub use bird_card_constants::*;
 pub use bird_card_impl::*;
+pub use bird_card_beak_impl::*;
 use strum::IntoEnumIterator;
 
 use crate::{expansion::Expansion, food::Foods};
