@@ -700,7 +700,7 @@ impl BirdCard {
                 let idxs = env
                     .current_player()
                     .get_mat()
-                    .get_birds_with_nest_type(goal_nest_type);
+                    .get_birds_with_nest_type(&goal_nest_type);
                 for (row_idx, bird_idx) in idxs {
                     let _ = env
                         .current_player_mut()
@@ -2100,7 +2100,7 @@ impl BirdCard {
                     let mat = bird_player.get_mat();
                     let mut choices: Vec<_> = nest_type
                         .iter()
-                        .flat_map(|nt| bird_player.get_mat().get_birds_with_nest_type(*nt))
+                        .flat_map(|nt| bird_player.get_mat().get_birds_with_nest_type(nt))
                         .filter(|(habitat, bird_idx)| {
                             mat.get_row(habitat)
                                 .can_place_egg(*bird_idx, egg_cap_override.into())

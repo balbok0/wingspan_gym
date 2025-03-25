@@ -11,6 +11,7 @@ mod bird_card_callback;
 mod bird_feeder;
 mod bonus_card;
 mod deck_and_holder;
+mod end_of_round_goal;
 mod error;
 mod expansion;
 mod food;
