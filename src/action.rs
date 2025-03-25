@@ -92,8 +92,7 @@ impl Action {
             Action::BirdActionFromHabitat(habitat) => {
                 let mat_row = env.current_player().get_mat().get_row(habitat).clone();
                 let (mut actions, mut end_of_turn_actions) = mat_row.get_bird_actions(env);
-                // TODO: Actions here should be empty I think
-                env.append_actions(&mut end_of_turn_actions);
+                env.prepend_actions(&mut end_of_turn_actions);
                 env.append_actions(&mut actions);
 
                 Ok(())
@@ -104,7 +103,7 @@ impl Action {
 
                 if matches!(*bird_card.color(), BirdCardColor::White | BirdCardColor::Pink) {
                     let mut action_result = bird_card.activate(env, &habitat, bird_idx).unwrap();
-                    env.append_actions(&mut action_result.end_of_turn_actions);
+                    env.prepend_actions(&mut action_result.end_of_turn_actions);
                     env.append_actions(&mut action_result.immediate_actions);
                 }
 
@@ -154,7 +153,6 @@ impl Action {
                     Err(WingError::InvalidAction)
                 } else {
                     let (habitat, bird_idx) = choices[action_idx];
-                    // TODO: Potentially check here if needed.
                     env.current_player_mut()
                         .get_mat_mut()
                         .get_row_mut(&habitat)
@@ -286,7 +284,7 @@ impl Action {
                 }
                 let mut action_result =
                     bird_card.after_choice_callback(action_idx, env, habitat, *bird_idx)?;
-                env.append_actions(&mut action_result.end_of_turn_actions);
+                env.prepend_actions(&mut action_result.end_of_turn_actions);
                 env.append_actions(&mut action_result.immediate_actions);
                 Ok(())
             }

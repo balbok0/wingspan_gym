@@ -7,7 +7,19 @@ use rand::{rngs::StdRng, seq::SliceRandom, SeedableRng};
 use pyo3::{exceptions::PyValueError, prelude::*};
 
 use crate::{
-    action::{Action, PyAction}, bird_card::get_deck as get_birds_deck, bird_card_callback::BirdCardCallback, bird_feeder::BirdFeeder, bonus_card::{get_deck as get_bonus_deck, BonusCard}, deck_and_holder::DeckAndHolder, end_of_round_goal::{sample_end_of_round_goals, EndOfRoundGoal, EndOfRoundScoring}, error::{WingError, WingResult}, expansion::Expansion, food::Foods, habitat::Habitat, player::Player, step_result::StepResult
+    action::{Action, PyAction},
+    bird_card::get_deck as get_birds_deck,
+    bird_card_callback::BirdCardCallback,
+    bird_feeder::BirdFeeder,
+    bonus_card::{get_deck as get_bonus_deck, BonusCard},
+    deck_and_holder::DeckAndHolder,
+    end_of_round_goal::{sample_end_of_round_goals, EndOfRoundGoal, EndOfRoundScoring},
+    error::{WingError, WingResult},
+    expansion::Expansion,
+    food::Foods,
+    habitat::Habitat,
+    player::Player,
+    step_result::StepResult,
 };
 
 #[derive(Debug, Builder, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -95,7 +107,11 @@ impl WingspanEnv {
         self._bird_deck = DeckAndHolder::new(deck);
         self._bonus_deck = get_bonus_deck(&self.config.expansions);
 
-        self._end_of_round_goals = sample_end_of_round_goals(self.config.expansions.as_slice(), self.config.num_rounds, &mut self.rng);
+        self._end_of_round_goals = sample_end_of_round_goals(
+            self.config.expansions.as_slice(),
+            self.config.num_rounds,
+            &mut self.rng,
+        );
 
         // Give each player cards
         for _ in 0..self.config.num_players {
@@ -160,7 +176,7 @@ impl WingspanEnv {
                         action_idx,
                         &callback.habitat,
                         callback.card_idx,
-                        callback.card_player_idx
+                        callback.card_player_idx,
                     )?;
 
                     if callback_successful {
@@ -293,7 +309,9 @@ impl WingspanEnv {
 
     fn score_end_of_round_goal(&mut self, goal: &EndOfRoundGoal, round_to_score_idx: usize) {
         // TODO: Implement also non-competitive scoring
-        let scores = (0..self._players.len()).map(|player_idx| (goal.get_num_matching(self, player_idx), player_idx)).sorted();
+        let scores = (0..self._players.len())
+            .map(|player_idx| (goal.get_num_matching(self, player_idx), player_idx))
+            .sorted();
 
         const COMPETITIVE_BASE_SCORES: [u8; 4] = [4, 1, 0, 0];
         const COMPETITIVE_PER_ROUND_SCORE_ADDS: [u8; 4] = [1, 1, 1, 0];
@@ -334,7 +352,8 @@ impl WingspanEnv {
                     ;
                     let pts_per_player = total_pts / cur_players.len() as u8;
                     for cur_player_idx in cur_players.iter() {
-                        self.get_player_mut(*cur_player_idx).add_end_of_round_points(pts_per_player);
+                        self.get_player_mut(*cur_player_idx)
+                            .add_end_of_round_points(pts_per_player);
                     }
 
                     // Only up-to third place gets points.
@@ -347,10 +366,11 @@ impl WingspanEnv {
                     cur_score = player_score;
                     cur_players.push(player_idx);
                 }
-            },
+            }
             EndOfRoundScoring::Friendly => {
                 for (player_score, player_idx) in scores {
-                    self.get_player_mut(player_idx).add_end_of_round_points(player_score.min(5) as u8);
+                    self.get_player_mut(player_idx)
+                        .add_end_of_round_points(player_score.min(5) as u8);
                 }
             }
         }
@@ -515,7 +535,15 @@ impl PyWingspanEnv {
     }
 
     #[allow(clippy::type_complexity)]
-    pub fn _debug_get_state(slf: &Bound<'_, Self>) -> (i8, usize, Option<String>, Vec<Player>, HashMap<usize, HashSet<BirdCardCallback>>) {
+    pub fn _debug_get_state(
+        slf: &Bound<'_, Self>,
+    ) -> (
+        i8,
+        usize,
+        Option<String>,
+        Vec<Player>,
+        HashMap<usize, HashSet<BirdCardCallback>>,
+    ) {
         let inner = &slf.borrow().inner;
 
         (
