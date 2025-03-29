@@ -43,6 +43,9 @@ class WingspanEnv(gym.Env):
     def cur_round(self) -> int:
         return self._inner.round_idx
 
+    def points(self) -> list[int]:
+        return self._inner.points()
+
     def _debug_print_state(self):
         round_idx, player_idx, action, players, callbacks = (
             self._inner._debug_get_state()

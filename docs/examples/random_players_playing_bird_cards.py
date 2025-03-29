@@ -55,6 +55,7 @@ while not episode_over and step_idx < max_steps:
         print(f"Step: {step_idx}/{max_steps}")
 
     if env.step(action) == StepResult.Terminated:
+        print(f"Score: {env.points()}")
         break
 
 env.close()

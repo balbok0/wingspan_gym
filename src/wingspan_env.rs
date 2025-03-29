@@ -53,6 +53,9 @@ pub struct WingspanEnv {
     // List of currently active callbacks (i.e. callbacks - callbacks that already executed)
     _active_callbacks: HashMap<usize, HashSet<BirdCardCallback>>,
 
+    // Whether end of game calculation happened or not
+    _end_of_game_happened: bool,
+
     // Some cards specifically require checking if a predator action succeeds or not.
     // It's a unique dynamic in Wingspan so ok to have this done this way IMO
     pub(crate) _predator_succeeded: bool,
@@ -86,6 +89,7 @@ impl WingspanEnv {
             _predator_succeeded: false,
             _turn_action_taken: Default::default(),
             _food_at_start_of_turn: Default::default(),
+            _end_of_game_happened: false,
         };
         env.reset(None);
 
@@ -114,7 +118,8 @@ impl WingspanEnv {
         );
 
         // Give each player cards
-        for _ in 0..self.config.num_players {
+        self._players.clear();
+        for _player_idx in 0..self.config.num_players {
             let player_bird_cards = self._bird_deck.draw_cards_from_deck(5);
             let player_bonus_cards = self._bonus_deck.split_off(self._bonus_deck.len() - 2);
             self._players
@@ -153,9 +158,12 @@ impl WingspanEnv {
 
             self.score_end_of_round_goal(&goal, (self._round_idx - 1) as usize);
 
-            for player_idx in (self._player_idx..self.config.num_players).chain(0..self._player_idx) {
+            for player_idx in (self._player_idx..self.config.num_players).chain(0..self._player_idx)
+            {
                 self._player_idx = player_idx;
-                let birds = self.get_player(player_idx).get_birds_on_mat()
+                let birds = self
+                    .get_player(player_idx)
+                    .get_birds_on_mat()
                     .iter()
                     .zip(HABITATS)
                     .flat_map(|(v, hab)| v.iter().map(move |bc| (*bc, hab)).enumerate())
@@ -176,6 +184,46 @@ impl WingspanEnv {
         self._bird_deck.reset_display();
 
         Ok(())
+    }
+
+    fn end_of_game(&mut self) -> WingResult<()> {
+        if self._end_of_game_happened {
+            return Err(WingError::TaskOutOfOrder(
+                "end of game sequence called multiple times".to_string(),
+            ));
+        }
+        if self._round_idx != self.config.num_rounds as i8 {
+            return Err(WingError::TaskOutOfOrder(format!(
+                "end of game sequence called on round {}, but game ends on round {}",
+                self._round_idx, self.config.num_rounds
+            )));
+        }
+
+        // Activate them birds
+        for player_idx in 0..self.config.num_players {
+            self._player_idx = player_idx;
+            let birds = self
+                .get_player(player_idx)
+                .get_birds_on_mat()
+                .iter()
+                .zip(HABITATS)
+                .flat_map(|(v, hab)| v.iter().map(move |bc| (*bc, hab)).enumerate())
+                .filter(|(_, (bc, _))| *bc.color() == BirdCardColor::Yellow)
+                .collect::<Vec<_>>();
+            for (bird_idx, (bc, habitat)) in birds.clone() {
+                bc.activate(self, &habitat, bird_idx)?;
+            }
+        }
+        self._end_of_game_happened = true;
+
+        Ok(())
+    }
+
+    pub fn points(&self) -> Vec<u8> {
+        self._players
+            .iter()
+            .map(|p| p.calculate_points())
+            .collect_vec()
     }
 
     fn check_callbacks(&mut self, action: &Action, action_idx: u8) -> WingResult<()> {
@@ -219,20 +267,17 @@ impl WingspanEnv {
     pub fn step(&mut self, action_idx: u8) -> WingResult<StepResult> {
         if self._round_idx == 4 {
             // We have terminated / End of round
-            println!("Termination / End of Round");
             return Ok(StepResult::Terminated);
         }
 
         // unwrap is safe, since there is a check in the end
         let action = self._action_queue.last().unwrap().clone();
         if !action.is_performable(self) {
-            println!("Invalid Action");
             return Err(WingError::InvalidAction);
         }
         let mut action = self._action_queue.pop().unwrap();
         if let Err(e) = action.perform_action(action_idx, self) {
             self.push_action(action);
-            println!("Action Error");
             return Err(e);
         };
 
@@ -255,7 +300,6 @@ impl WingspanEnv {
             // If next action has only one valid action, just do it
             let valid_actions = next_action.valid_actions(self);
             if valid_actions.len() == 1 {
-                println!("Calling next valid action: {next_action:?} {}", valid_actions[0]);
                 self.step(valid_actions[0])?;
             } else {
                 // Next action is valid and has more than one option
@@ -313,7 +357,7 @@ impl WingspanEnv {
 
                     if self._round_idx == self.config.num_rounds as i8 {
                         // End of game is after Round 4 (0 - when it is zero indexed)
-                        println!("End of game (update round idx update)");
+                        self.end_of_game()?;
                         return Ok(StepResult::Terminated);
                     }
                 } else {
@@ -327,7 +371,6 @@ impl WingspanEnv {
             }
         }
 
-        println!("Happy path return");
         Ok(StepResult::Live)
     }
 
@@ -552,6 +595,14 @@ impl PyWingspanEnv {
             Err(x) => Err(x.into()),
             // Err(x) => return Err(x.into()),
         }
+    }
+
+    pub fn points(&self) -> Vec<usize> {
+        self.inner
+            .points()
+            .into_iter()
+            .map(|v| v as usize)
+            .collect_vec()
     }
 
     pub fn action_space_size(slf: &Bound<'_, Self>) -> Option<usize> {

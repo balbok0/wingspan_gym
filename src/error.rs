@@ -8,6 +8,9 @@ pub enum WingError {
 
     #[error("Invalid bird")]
     InvalidBird(String),
+
+    #[error("Task called out of order")]
+    TaskOutOfOrder(String),
 }
 
 impl From<WingError> for PyErr {
@@ -15,6 +18,7 @@ impl From<WingError> for PyErr {
         match val {
             WingError::InvalidAction => PyValueError::new_err(format!("{}", val)),
             WingError::InvalidBird(err_msg) => PyValueError::new_err(err_msg.to_string()),
+            WingError::TaskOutOfOrder(err_msg) => PyValueError::new_err(err_msg.to_string()),
         }
     }
 }

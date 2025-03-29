@@ -239,8 +239,8 @@ impl Player {
                         let mut points = 0;
                         let mut idx = 0;
                         while idx < steps.len() && count >= steps[idx].0 {
-                            idx += 1;
                             points = steps[idx].1;
+                            idx += 1;
                         }
                         points
                     }
@@ -254,6 +254,7 @@ impl Player {
             + egg_points
             + tucked_cards
             + cached_food
+            + (self.foods.iter().sum::<u8>() / 4)
     }
 
     pub fn add_bird_card(&mut self, bird_card: BirdCard) {
@@ -309,7 +310,7 @@ impl Player {
 impl Player {
     #[getter]
     pub fn bird_cards(&self) -> Vec<BirdCard> {
-        self.bird_cards.iter().cloned().collect()
+        self.bird_cards.to_vec()
     }
 
     pub fn birds_on_mat(&self) -> [Vec<BirdCard>; 3] {
@@ -317,21 +318,15 @@ impl Player {
             self.mat
                 .get_row(&Habitat::Forest)
                 .get_birds()
-                .iter()
-                .cloned()
-                .collect(),
+                .to_vec(),
             self.mat
                 .get_row(&Habitat::Grassland)
                 .get_birds()
-                .iter()
-                .cloned()
-                .collect(),
+                .to_vec(),
             self.mat
                 .get_row(&Habitat::Wetland)
                 .get_birds()
-                .iter()
-                .cloned()
-                .collect(),
+                .to_vec(),
         ]
     }
 }

@@ -77,6 +77,13 @@ class PyWingspanEnv:
         """
         ...
 
+    def points(self) -> list[int]:
+        """Number of points on per-player basis
+
+        Returns:
+            list[int]: List of current point tally for each player
+        """
+
 class StepResult(Enum):
     """Internal enum describing result of the action."""
 
