@@ -1,5 +1,6 @@
 // This code is generated automatically via a script in code_gen/ folder
 use strum_macros::EnumIter;
+use pyo3::prelude::*;
 
 use super::BirdCardColor;
 use crate::{
@@ -11,6 +12,7 @@ use crate::{
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, EnumIter, Hash)]
+#[pyclass(eq, eq_int)]
 pub enum BirdCard {
     AbbottsBooby,
     AcornWoodpecker,

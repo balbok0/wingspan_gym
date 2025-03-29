@@ -9,3 +9,14 @@ pub struct BirdCardCallback {
     pub card_idx: usize,
     pub card_player_idx: usize,
 }
+
+#[pymethods]
+impl BirdCardCallback {
+    fn __repr__(&self) -> String {
+        format!("Callback: ({:?}, {:?}, {}, {})", self.card, self.habitat, self.card_idx, self.card_player_idx)
+    }
+
+    fn __str__(&self) -> String {
+        format!("Callback: ({:?}, {:?}, {}, {})", self.card, self.habitat, self.card_idx, self.card_player_idx)
+    }
+}

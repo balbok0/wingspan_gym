@@ -7,7 +7,7 @@ use crate::{
     bird_card_callback::BirdCardCallback,
     error::{WingError, WingResult},
     food::FoodIndex,
-    habitat::Habitat,
+    habitat::{Habitat, HABITATS},
     nest::NestType,
     wingspan_env::WingspanEnv,
 };
@@ -1038,7 +1038,7 @@ impl BirdCard {
                 for player_idx in 0..env.config().num_players {
                     let mat = env.get_player(player_idx).get_mat();
                     let mut playable_birds = vec![];
-                    for habitat in [Habitat::Forest, Habitat::Grassland, Habitat::Wetland] {
+                    for habitat in HABITATS {
                         let row = mat.get_row(&habitat);
                         for (bird_idx, bird_card) in row.get_birds().iter().enumerate() {
                             if bird_card.nest_type() == &nest_type && row.can_place_egg(bird_idx, 0)
@@ -1546,7 +1546,7 @@ impl BirdCard {
                     .get_row(habitat)
                     .get_birds()
                     .iter()
-                    .filter(|bc| bc.color() == &BirdCardColor::Brown)
+                    .filter(|bc| bc.color() == &BirdCardColor::Brown && *bc != self)
                     .count();
 
                 if num_choices == 0 {
@@ -1829,7 +1829,7 @@ impl BirdCard {
                 // discard 1 [egg] from any of your other birds to gain 2 [wild] from the supply.
                 let mut choices = vec![];
                 let mat = env.current_player().get_mat();
-                for iter_habitat in [Habitat::Forest, Habitat::Grassland, Habitat::Wetland] {
+                for iter_habitat in HABITATS {
                     let row = mat.get_row(&iter_habitat);
                     for (iter_bird_idx, _bird_card) in row.get_birds().iter().enumerate() {
                         if (iter_habitat != *habitat || iter_bird_idx != bird_idx)
@@ -2282,7 +2282,7 @@ impl BirdCard {
                     let bird_choices: Box<[(Habitat, usize)]> = bird_player
                         .get_birds_on_mat()
                         .iter()
-                        .zip([Habitat::Forest, Habitat::Grassland, Habitat::Wetland])
+                        .zip(HABITATS)
                         .flat_map(|(row, hab)| {
                             row.iter()
                                 .enumerate()
@@ -2365,7 +2365,7 @@ impl BirdCard {
                     .get_birds()
                     .iter()
                     .enumerate()
-                    .filter(|(_bird_idx, bc)| bc.color() == &BirdCardColor::Brown)
+                    .filter(|(_bird_idx, bc)| bc.color() == &BirdCardColor::Brown && *bc != self)
                     .collect();
 
                 if choice_idx >= bird_choices.len() {

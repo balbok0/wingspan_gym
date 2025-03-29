@@ -3,7 +3,7 @@ use crate::{
     bird_card::{BirdCard, BirdCardColor},
     error::{WingError, WingResult},
     food::FoodIndex,
-    habitat::Habitat,
+    habitat::{Habitat, HABITATS},
     nest::NestType,
     wingspan_env::WingspanEnv,
 };
@@ -506,7 +506,7 @@ impl PlayerMat {
         self.rows()
             .map(|r| r.get_birds())
             .iter()
-            .zip([Habitat::Forest, Habitat::Grassland, Habitat::Wetland])
+            .zip(HABITATS)
             .flat_map(|(bc, row_idx)| {
                 bc.iter()
                     .enumerate()

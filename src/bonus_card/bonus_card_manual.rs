@@ -353,8 +353,7 @@ impl BonusCard {
 #[cfg(test)]
 mod tests {
     use crate::{
-        bird_card::BirdCard,
-        player_mat::{MatRow, PlayerMat},
+        bird_card::BirdCard, habitat::HABITATS, player_mat::{MatRow, PlayerMat}
     };
 
     use super::*;
@@ -366,7 +365,7 @@ mod tests {
     ) -> Player {
         let env_rows: Vec<_> = [forest_cards, grassland_cards, wetland_cards]
             .into_iter()
-            .zip([Habitat::Forest, Habitat::Grassland, Habitat::Wetland])
+            .zip(HABITATS)
             .map(|(cards, habitat)| {
                 MatRow::new_test(
                     habitat,

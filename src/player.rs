@@ -308,29 +308,29 @@ impl Player {
 #[pymethods]
 impl Player {
     #[getter]
-    pub fn bird_cards(&self) -> Vec<u16> {
-        self.bird_cards.iter().map(BirdCard::index).collect()
+    pub fn bird_cards(&self) -> Vec<BirdCard> {
+        self.bird_cards.iter().cloned().collect()
     }
 
-    pub fn birds_on_mat(&self) -> [Vec<u16>; 3] {
+    pub fn birds_on_mat(&self) -> [Vec<BirdCard>; 3] {
         [
             self.mat
                 .get_row(&Habitat::Forest)
                 .get_birds()
                 .iter()
-                .map(BirdCard::index)
+                .cloned()
                 .collect(),
             self.mat
                 .get_row(&Habitat::Grassland)
                 .get_birds()
                 .iter()
-                .map(BirdCard::index)
+                .cloned()
                 .collect(),
             self.mat
                 .get_row(&Habitat::Wetland)
                 .get_birds()
                 .iter()
-                .map(BirdCard::index)
+                .cloned()
                 .collect(),
         ]
     }

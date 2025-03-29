@@ -7,6 +7,8 @@ pub enum Habitat {
     Wetland,
 }
 
+pub const HABITATS: [Habitat; 3] = [Habitat::Forest, Habitat::Grassland, Habitat::Wetland];
+
 impl From<usize> for Habitat {
     fn from(value: usize) -> Self {
         match value {

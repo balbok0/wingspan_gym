@@ -8,7 +8,7 @@ use pyo3::{exceptions::PyValueError, prelude::*};
 
 use crate::{
     action::{Action, PyAction},
-    bird_card::get_deck as get_birds_deck,
+    bird_card::{get_deck as get_birds_deck, BirdCardColor},
     bird_card_callback::BirdCardCallback,
     bird_feeder::BirdFeeder,
     bonus_card::{get_deck as get_bonus_deck, BonusCard},
@@ -17,7 +17,7 @@ use crate::{
     error::{WingError, WingResult},
     expansion::Expansion,
     food::Foods,
-    habitat::Habitat,
+    habitat::{Habitat, HABITATS},
     player::Player,
     step_result::StepResult,
 };
@@ -141,16 +141,32 @@ impl WingspanEnv {
         self._food_at_start_of_turn = *self.current_player().get_foods();
     }
 
-    fn end_of_round(&mut self) {
+    fn end_of_round(&mut self) -> WingResult<()> {
         self._round_idx += 1;
         self._player_idx = self._round_idx as usize % self.config.num_players;
+        self._cur_turn_player_idx = self._player_idx;
 
         // TODO: End of round abilities
-        // TODO: End of round goals
+
         if self._round_idx > 0 {
             let goal = self._end_of_round_goals[(self._round_idx - 1) as usize];
 
             self.score_end_of_round_goal(&goal, (self._round_idx - 1) as usize);
+
+            for player_idx in (self._player_idx..self.config.num_players).chain(0..self._player_idx) {
+                self._player_idx = player_idx;
+                let birds = self.get_player(player_idx).get_birds_on_mat()
+                    .iter()
+                    .zip(HABITATS)
+                    .flat_map(|(v, hab)| v.iter().map(move |bc| (*bc, hab)).enumerate())
+                    .filter(|(_, (bc, _))| *bc.color() == BirdCardColor::Teal)
+                    .collect::<Vec<_>>();
+                for (bird_idx, (bc, habitat)) in birds.clone() {
+                    bc.activate(self, &habitat, bird_idx)?;
+                }
+            }
+
+            self._player_idx = self._cur_turn_player_idx;
         }
 
         // Start of the new round
@@ -158,6 +174,8 @@ impl WingspanEnv {
             player.set_turns_left(8 - self._round_idx as u8);
         }
         self._bird_deck.reset_display();
+
+        Ok(())
     }
 
     fn check_callbacks(&mut self, action: &Action, action_idx: u8) -> WingResult<()> {
@@ -201,17 +219,20 @@ impl WingspanEnv {
     pub fn step(&mut self, action_idx: u8) -> WingResult<StepResult> {
         if self._round_idx == 4 {
             // We have terminated / End of round
+            println!("Termination / End of Round");
             return Ok(StepResult::Terminated);
         }
 
         // unwrap is safe, since there is a check in the end
         let action = self._action_queue.last().unwrap().clone();
         if !action.is_performable(self) {
+            println!("Invalid Action");
             return Err(WingError::InvalidAction);
         }
         let mut action = self._action_queue.pop().unwrap();
         if let Err(e) = action.perform_action(action_idx, self) {
             self.push_action(action);
+            println!("Action Error");
             return Err(e);
         };
 
@@ -234,6 +255,7 @@ impl WingspanEnv {
             // If next action has only one valid action, just do it
             let valid_actions = next_action.valid_actions(self);
             if valid_actions.len() == 1 {
+                println!("Calling next valid action: {next_action:?} {}", valid_actions[0]);
                 self.step(valid_actions[0])?;
             } else {
                 // Next action is valid and has more than one option
@@ -287,10 +309,11 @@ impl WingspanEnv {
                 // Normal rounds
                 if self.current_player().turns_left == 0 {
                     // End of round
-                    self.end_of_round();
+                    self.end_of_round()?;
 
-                    if self._round_idx == 4 {
+                    if self._round_idx == self.config.num_rounds as i8 {
                         // End of game is after Round 4 (0 - when it is zero indexed)
+                        println!("End of game (update round idx update)");
                         return Ok(StepResult::Terminated);
                     }
                 } else {
@@ -304,6 +327,7 @@ impl WingspanEnv {
             }
         }
 
+        println!("Happy path return");
         Ok(StepResult::Live)
     }
 
