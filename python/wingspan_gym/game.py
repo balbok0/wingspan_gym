@@ -3,7 +3,7 @@
 from typing import Optional
 
 import gymnasium as gym
-from ._internal import PyWingspanEnv
+from ._internal import Player, PyWingspanEnv
 
 
 class WingspanEnv(gym.Env):
@@ -59,9 +59,9 @@ class WingspanEnv(gym.Env):
         self._print_player(players[player_idx])
 
     @staticmethod
-    def _print_player(player):
+    def _print_player(player: Player):
         print(f"  Birds: {player.bird_cards}")
-        # print(f"  Bonus: {self.bonus_cards}")
+        print(f"  Bonus: {player.bonus_cards}")
         print(f"  Foods: {player.foods}")
 
         placed_birds = player.birds_on_mat()

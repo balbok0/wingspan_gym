@@ -1,4 +1,10 @@
 use action::PyAction;
+use bird_card::{BirdCard, BirdCardColor};
+use bonus_card::{BonusCard, PyScoringRuleType};
+use expansion::Expansion;
+use food::CostAlternative;
+use habitat::Habitat;
+use player::Player;
 use pyo3::prelude::*;
 use step_result::StepResult;
 use wingspan_env::PyWingspanEnv;
@@ -28,6 +34,14 @@ fn wingspan_gym(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyWingspanEnv>()?;
     m.add_class::<StepResult>()?;
     m.add_class::<PyAction>()?;
+    m.add_class::<Player>()?;
+    m.add_class::<BirdCard>()?;
+    m.add_class::<Habitat>()?;
+    m.add_class::<BirdCardColor>()?;
+    m.add_class::<CostAlternative>()?;
+    m.add_class::<Expansion>()?;
+    m.add_class::<BonusCard>()?;
+    m.add_class::<PyScoringRuleType>()?;
 
     Ok(())
 }

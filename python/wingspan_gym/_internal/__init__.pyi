@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Optional
+from typing import Optional, Union
 
 class PyWingspanEnv:
     def __init__(
@@ -97,3 +97,82 @@ class PyAction:
     def __str__(self) -> str:
         """String representation of this PyAction."""
         ...
+
+class Player:
+    @property
+    def foods(self) -> bytes: ...
+    @property
+    def bird_cards(self) -> list[BirdCard]: ...
+    @property
+    def bonus_cards(self) -> list[BonusCard]: ...
+    @property
+    def turns_left(self) -> int: ...
+    @property
+    def end_of_round_points(self) -> int: ...
+    def birds_on_mat(self) -> list[list[BirdCard]]: ...
+
+class BirdCard:
+    @property
+    def index(self) -> int: ...
+    @property
+    def name(self) -> str: ...
+    @property
+    def cost(self) -> tuple[bytes, int, CostAlternative]: ...
+    @property
+    def color(self) -> BirdCardColor: ...
+    @property
+    def habitats(self) -> list[Habitat]: ...
+    @property
+    def wingspan(self) -> int | None: ...
+    @property
+    def is_predator(self) -> bool: ...
+    @property
+    def expansion(self) -> Expansion: ...
+    @property
+    def bonus_card_membership(self) -> list[BonusCard]: ...
+
+class Habitat(Enum):
+    Forest = 0
+    Grassland = 1
+    Wetland = 2
+
+BirdCardColor = Enum(
+    "BirdCardColor",
+    {
+        "White": 0,
+        "Brown": 1,
+        "Pink": 2,
+        "None": 3,
+        "Teal": 4,
+        "Yellow": 5,
+    },
+)
+
+class CostAlternative(Enum):
+    Yes = 0
+    No = 1
+
+class Expansion(Enum):
+    Core = 0
+    Asia = 1
+    European = 2
+    Oceania = 3
+
+class BonusCard:
+    @property
+    def index(self) -> int: ...
+    @property
+    def name(self) -> str: ...
+    @property
+    def expansion(self) -> Expansion: ...
+    @property
+    def scoring_rule(self) -> ScoringRule: ...
+
+class PyScoringRuleType:
+    Each = 0
+    Ladder = 1
+
+ScoringRule = Union[
+    tuple[PyScoringRuleType.Each, int],
+    tuple[PyScoringRuleType.Ladder, list[tuple[int, int]]],
+]

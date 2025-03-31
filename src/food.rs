@@ -5,12 +5,14 @@
 // 3 - Fruit
 // 4 - Rodent
 
+use pyo3::prelude::*;
 use strum_macros::EnumIter;
 
 pub type FoodReq = [Option<u8>; 5];
 pub type Foods = [u8; 5];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[pyclass(eq, eq_int)]
 pub enum CostAlternative {
     Yes,
     No,
