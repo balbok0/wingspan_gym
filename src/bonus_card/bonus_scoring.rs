@@ -9,8 +9,8 @@ pub enum ScoringRule {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[pyclass(eq, eq_int)]
 pub enum PyScoringRuleType {
-    Each,
-    Ladder
+    Each = 0,
+    Ladder = 1,
 }
 
 

@@ -4,9 +4,9 @@ use pyo3::prelude::*;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[pyclass(eq, eq_int)]
 pub enum BeakDirection {
-  Left,
-  Right,
-  None,
+  Left = 0,
+  Right = 1,
+  None = 2,
 }
 
 impl BirdCard {

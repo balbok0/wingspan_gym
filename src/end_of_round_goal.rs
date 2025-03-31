@@ -13,8 +13,8 @@ use crate::{
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[pyclass(eq, eq_int)]
 pub enum EndOfRoundScoring {
-    Competitive,
-    Friendly,
+    Competitive = 0,
+    Friendly = 1,
 }
 
 #[derive(Debug, Clone, Copy)]
