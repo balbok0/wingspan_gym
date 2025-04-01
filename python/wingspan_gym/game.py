@@ -3,7 +3,7 @@
 from typing import Optional
 
 import gymnasium as gym
-from ._internal import Player, PyWingspanEnv
+from ._internal import Player, PyAction, PyWingspanEnv
 
 
 class WingspanEnv(gym.Env):
@@ -37,13 +37,34 @@ class WingspanEnv(gym.Env):
             raise ValueError("Action space is non-existent in terminated state")
         return inner_result
 
-    def cur_player(self) -> int:
+    def cur_player_idx(self) -> int:
+        """Returns index of current player
+
+        Returns:
+            int: Index of current player
+        """
         return self._inner.player_idx
 
     def cur_round(self) -> int:
+        """Returns index of current round.
+
+        Round index can be -1, which means that game is still in setup phase (i.e. players are choosing which resource to discard).
+        It is 0-indexed, so first round is 0.
+        If it is equal to number of round in the game, this means that game is finished and in terminated state.
+
+        Returns:
+            int: Index of current round [-1, num_rounds]
+        """
         return self._inner.round_idx
 
     def points(self) -> list[int]:
+        """Current point tally for each of the players.
+
+        This is calculated as if the game finished right now (although end of game/end of round abilities are not triggered).
+
+        Returns:
+            list[int]: Current point tally for each of the players.
+        """
         return self._inner.points()
 
     def _debug_print_state(self):
@@ -69,5 +90,10 @@ class WingspanEnv(gym.Env):
         for row_type, birds in zip(["F", "G", "W"], placed_birds):
             print(f"    {row_type}: {birds}")
 
-    def next_action(self):
+    def next_action(self) -> Optional[PyAction]:
+        """What is the next action to be taken by current player
+
+        Returns:
+            Optional[PyAction]: Next action to be performed. None, if game is in terminated state.
+        """
         return self._inner.next_action()

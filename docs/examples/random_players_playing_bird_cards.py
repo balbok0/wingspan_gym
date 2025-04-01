@@ -47,7 +47,7 @@ while not episode_over and step_idx < max_steps:
     step_idx += 1
     # action = env.action_space.sample()  # agent policy that uses the observation and info
 
-    action = player[env.cur_player()].get_next_action()
+    action = player[env.cur_player_idx()].get_next_action()
     if VERBOSE:
         print("=========")
         print(env._debug_print_state())

@@ -7,7 +7,6 @@ The main interactivity is provided with `step` and `reset` functions, although r
 from enum import Enum
 from typing import Optional, Union
 
-
 class PyWingspanEnv:
     def __init__(
         self, hand_limit: Optional[int] = None, num_players: Optional[int] = None
@@ -91,7 +90,6 @@ class PyWingspanEnv:
             list[int]: List of current point tally for each player
         """
 
-
 class StepResult(Enum):
     """Internal enum describing result of the action."""
 
@@ -99,14 +97,12 @@ class StepResult(Enum):
     Terminated = 1
     Invalid = 2
 
-
 class PyAction:
     """A type of action that can be performed."""
 
     def __str__(self) -> str:
         """String representation of this PyAction."""
         ...
-
 
 class Player:
     """
@@ -181,7 +177,6 @@ class Player:
                 Inner list are birds placed in that habitat.
         """
         ...
-
 
 class BirdCard:
     """
@@ -286,15 +281,12 @@ class BirdCard:
         """
         ...
 
-
 class Habitat(Enum):
-    """Enum representing 3 different habitats in Wingspan.
-    """
+    """Enum representing 3 different habitats in Wingspan."""
 
     Forest = 0
     Grassland = 1
     Wetland = 2
-
 
 BirdCardColor = Enum(
     "BirdCardColor",
@@ -308,13 +300,11 @@ BirdCardColor = Enum(
     },
 )
 
-
 class CostAlternative(Enum):
-    """Whether Bird Card cost is alternative resources (i.e. "/") or cumulative resources (i.e. "+")
-    """
+    """Whether Bird Card cost is alternative resources (i.e. "/") or cumulative resources (i.e. "+")"""
+
     Yes = 0
     No = 1
-
 
 class Expansion(Enum):
     """Enum representing different expansions in Wingspan.
@@ -322,11 +312,11 @@ class Expansion(Enum):
     Note:
         Currently the only supported expansion is "Core".
     """
+
     Core = 0
     Asia = 1
     European = 2
     Oceania = 3
-
 
 class BonusCard:
     """
@@ -334,7 +324,6 @@ class BonusCard:
 
     Bonus cards are static, and do not track whether the card has in players possession etc.
     """
-
 
     @property
     def index(self) -> int:
@@ -379,16 +368,15 @@ class BonusCard:
         """
         ...
 
-
 class PyScoringRuleType:
     """
     Different types of scoring bonus cards based on number of birds satisfying condition.
 
     For more details see `ScoringRule` documentation.
     """
+
     Each = 0
     Ladder = 1
-
 
 ScoringRule = Union[
     tuple[PyScoringRuleType.Each, int],
@@ -411,7 +399,6 @@ There are two different types of scoring in Wingspan:
 
     For example see [Cartographer](https://navarog.github.io/wingsearch/card/1007)
 """
-
 
 # class FoodIndex(Enum):
 #     """Enum representing different food types in the game of wingspan.
