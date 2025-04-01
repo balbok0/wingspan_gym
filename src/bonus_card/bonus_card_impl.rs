@@ -1,10 +1,12 @@
 // This code is generated automatically via a script in code_gen/ folder
 use strum_macros::EnumIter;
+use pyo3::prelude::*;
 
 use super::ScoringRule;
 use crate::expansion::Expansion;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, EnumIter)]
+#[pyclass(eq, eq_int)]
 pub enum BonusCard {
     Anatomist,
     BackyardBirder,

@@ -1,11 +1,14 @@
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+use pyo3::prelude::*;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[pyclass(eq, eq_int)]
 pub enum BirdCardColor {
-    White,
-    Brown,
-    Pink,
-    None,
-    Teal,
-    Yellow,
+    White = 0,
+    Brown = 1,
+    Pink = 2,
+    None = 3,
+    Teal = 4,
+    Yellow = 5,
 }
 
 impl BirdCardColor {

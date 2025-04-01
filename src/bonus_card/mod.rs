@@ -1,6 +1,7 @@
 mod bonus_card_impl;
 mod bonus_card_manual;
 mod bonus_scoring;
+mod bonus_card_python;
 
 use std::collections::HashSet;
 

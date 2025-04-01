@@ -1,5 +1,6 @@
 mod bird_card_action_impl;
 mod bird_card_beak_impl;
+pub mod bird_card_python;
 pub mod bird_card_constants;
 pub mod bird_card_impl;
 

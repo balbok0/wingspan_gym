@@ -5,21 +5,24 @@
 // 3 - Fruit
 // 4 - Rodent
 
+use pyo3::prelude::*;
 use strum_macros::EnumIter;
 
 pub type FoodReq = [Option<u8>; 5];
 pub type Foods = [u8; 5];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[pyclass(eq, eq_int)]
 pub enum CostAlternative {
-    Yes,
-    No,
+    Yes = 0,
+    No = 1,
 }
 
 // Total food cost
 pub type BirdCardCost = (FoodReq, u8, CostAlternative);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, EnumIter)]
+#[pyclass(eq, eq_int)]
 pub enum FoodIndex {
     Invertebrate = 0,
     Seed = 1,

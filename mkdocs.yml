@@ -11,7 +11,7 @@ plugins:
         python:
           paths: [python/]
           options:
-            allow_inspection: true
+            allow_inspection: false
             merge_init_into_class: true
             show_source: false
   - mkdocs-jupyter:

@@ -1,10 +1,12 @@
 use crate::action::Action;
+use pyo3::prelude::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[pyclass(eq, eq_int)]
 pub enum Habitat {
-    Forest,
-    Grassland,
-    Wetland,
+    Forest = 0,
+    Grassland = 1,
+    Wetland = 2,
 }
 
 pub const HABITATS: [Habitat; 3] = [Habitat::Forest, Habitat::Grassland, Habitat::Wetland];

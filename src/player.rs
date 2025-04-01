@@ -4,7 +4,7 @@ use crate::{
     bonus_card::BonusCard,
     error::{WingError, WingResult},
     food::{FoodIndex, Foods},
-    habitat::Habitat,
+    habitat::{Habitat, HABITATS},
     player_mat::PlayerMat,
 };
 use pyo3::prelude::*;
@@ -14,7 +14,9 @@ use pyo3::prelude::*;
 pub struct Player {
     #[pyo3(get)]
     foods: Foods,
+    #[pyo3(get)]
     bird_cards: Vec<BirdCard>,
+    #[pyo3(get)]
     bonus_cards: Vec<BonusCard>,
 
     #[pyo3(get)]
@@ -22,6 +24,7 @@ pub struct Player {
 
     mat: PlayerMat,
 
+    #[pyo3(get)]
     end_of_round_points: u8,
 
     // Optimization that uses a fact, that before every bird play we check for resources etc.
@@ -308,26 +311,10 @@ impl Player {
 
 #[pymethods]
 impl Player {
-    #[getter]
-    pub fn bird_cards(&self) -> Vec<BirdCard> {
-        self.bird_cards.to_vec()
-    }
-
     pub fn birds_on_mat(&self) -> [Vec<BirdCard>; 3] {
-        [
-            self.mat
-                .get_row(&Habitat::Forest)
-                .get_birds()
-                .to_vec(),
-            self.mat
-                .get_row(&Habitat::Grassland)
-                .get_birds()
-                .to_vec(),
-            self.mat
-                .get_row(&Habitat::Wetland)
-                .get_birds()
-                .to_vec(),
-        ]
+        HABITATS.map(
+            |hab| self.mat.get_row(&hab).get_birds().to_vec()
+        )
     }
 }
 
