@@ -1,6 +1,6 @@
 [project]
 name = "wingspan_gym"
-description = "Add your description here"
+description = "Gymnasium compatible Wingspan (Board Game) implementation."
 readme = "README.md"
 requires-python = ">=3.10"
 dynamic = ["version"]
