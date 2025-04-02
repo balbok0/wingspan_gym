@@ -400,14 +400,15 @@ There are two different types of scoring in Wingspan:
     For example see [Cartographer](https://navarog.github.io/wingsearch/card/1007)
 """
 
-# class FoodIndex(Enum):
-#     """Enum representing different food types in the game of wingspan.
 
-#     These are actual food types existing, and not wild foods etc.
-#     """
+class FoodIndex(Enum):
+    """Enum representing different food types in the game of wingspan.
 
-#     Invertebrate = 0
-#     Seed = 1
-#     Fish = 2
-#     Fruit = 3
-#     Rodent = 4
+    These are actual food types existing, and not wild foods etc.
+    """
+
+    Invertebrate = 0
+    Seed = 1
+    Fish = 2
+    Fruit = 3
+    Rodent = 4
