@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use strum::IntoEnumIterator;
 
 use super::BirdCard;
@@ -1095,31 +1096,35 @@ impl BirdCard {
             }
             Self::AmericanBittern | Self::CommonLoon => {
                 // player(s) with the fewest birds in their [wetland] draw 1 [card].
-                let min_birds_num = (0..env.config().num_players)
+                let num_birds_per_player = (0..env.config().num_players)
                     .map(|idx| {
-                        env.get_player(idx)
+                        (
+                            env.get_player(idx)
                             .get_mat()
                             .get_row(&Habitat::Wetland)
                             .get_birds()
-                            .len()
+                            .len(),
+                            idx
+                        )
                     })
+                    .collect_vec();
+                let min_num_birds = *num_birds_per_player.iter()
+                    .map(|(num_birds, _idx)| num_birds)
                     .min()
                     .unwrap();
 
+                let players_with_min_birds = num_birds_per_player.iter()
+                    .filter_map(|(num_birds, player_idx)| {
+                        if *num_birds == min_num_birds {
+                            Some(*player_idx)
+                        } else {
+                            None
+                        }
+                    });
+
                 let cur_player_idx = env.current_player_idx();
 
-                for player_idx in 0..min_birds_num {
-                    if min_birds_num
-                        < env
-                            .get_player(player_idx)
-                            .get_mat()
-                            .get_row(&Habitat::Wetland)
-                            .get_birds()
-                            .len()
-                    {
-                        continue;
-                    }
-
+                for player_idx in players_with_min_birds {
                     env.set_current_player(player_idx);
                     let bird_card = env._bird_deck.draw_cards_from_deck(1)[0];
                     env.current_player_mut().add_bird_card(bird_card);
