@@ -546,6 +546,10 @@ impl PyAction {
     pub fn __str__(&self) -> String {
         format!("{:?}", self.inner)
     }
+
+    pub fn __repr__(&self) -> String {
+        format!("{:?}", self.inner)
+    }
 }
 
 // Helper things for Specific actions
