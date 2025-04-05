@@ -30,7 +30,6 @@ impl Default for ActivateResult {
     }
 }
 
-
 impl BirdCard {
     pub fn activate(
         &self,
@@ -439,7 +438,7 @@ impl BirdCard {
 
                 let cur_player_idx = env.current_player_idx();
 
-                let mut actions = Vec::new();
+                let mut actions = vec![Action::ChangePlayer(cur_player_idx)];
 
                 for player_idx in 0..min_birds_num {
                     if min_birds_num
@@ -456,7 +455,6 @@ impl BirdCard {
                     actions.push(Action::GetFood);
                     actions.push(Action::ChangePlayer(player_idx));
                 }
-                actions.insert(0, Action::ChangePlayer(cur_player_idx));
 
                 Ok(ActivateResult {
                     immediate_actions: actions,
@@ -1021,7 +1019,7 @@ impl BirdCard {
                 todo!()
             }
             Self::LazuliBunting | Self::WesternMeadowlark | Self::PileatedWoodpecker => {
-                // all players lay 1 [egg] on any 1 [NEST TYPE] bird. you may lay 1 [egg] on 1 additional [bowl] bird.
+                // all players lay 1 [egg] on any 1 [NEST TYPE] bird. you may lay 1 [egg] on 1 additional [NEST TYPE] bird.
 
                 let nest_type = match self {
                     Self::LazuliBunting => NestType::Bowl,
@@ -1035,7 +1033,7 @@ impl BirdCard {
                 };
 
                 let cur_player_idx = env.current_player_idx();
-                let mut actions = Vec::new();
+                let mut actions = vec![Action::ChangePlayer(env.current_player_idx())];
                 for player_idx in 0..env.config().num_players {
                     let mat = env.get_player(player_idx).get_mat();
                     let mut playable_birds = vec![];
@@ -1071,7 +1069,6 @@ impl BirdCard {
                 }
 
                 // Switch back to the player
-                actions.insert(0, Action::ChangePlayer(cur_player_idx));
                 Ok(ActivateResult {
                     immediate_actions: actions,
                     ..Default::default()
@@ -1100,27 +1097,30 @@ impl BirdCard {
                     .map(|idx| {
                         (
                             env.get_player(idx)
-                            .get_mat()
-                            .get_row(&Habitat::Wetland)
-                            .get_birds()
-                            .len(),
-                            idx
+                                .get_mat()
+                                .get_row(&Habitat::Wetland)
+                                .get_birds()
+                                .len(),
+                            idx,
                         )
                     })
                     .collect_vec();
-                let min_num_birds = *num_birds_per_player.iter()
+                let min_num_birds = *num_birds_per_player
+                    .iter()
                     .map(|(num_birds, _idx)| num_birds)
                     .min()
                     .unwrap();
 
-                let players_with_min_birds = num_birds_per_player.iter()
-                    .filter_map(|(num_birds, player_idx)| {
-                        if *num_birds == min_num_birds {
-                            Some(*player_idx)
-                        } else {
-                            None
-                        }
-                    });
+                let players_with_min_birds =
+                    num_birds_per_player
+                        .iter()
+                        .filter_map(|(num_birds, player_idx)| {
+                            if *num_birds == min_num_birds {
+                                Some(*player_idx)
+                            } else {
+                                None
+                            }
+                        });
 
                 let cur_player_idx = env.current_player_idx();
 
@@ -1551,7 +1551,11 @@ impl BirdCard {
                     .get_row(habitat)
                     .get_birds()
                     .iter()
-                    .filter(|bc| bc.color() == &BirdCardColor::Brown && *bc != self)
+                    // Below is not what the card says, but otherwise it would create possibility of infinite loop (trust me it happens)
+                    .filter(|bc| {
+                        bc.color() == &BirdCardColor::Brown
+                            && !matches!(bc, Self::GrayCatbird | Self::NorthernMockingbird)
+                    })
                     .count();
 
                 if num_choices == 0 {
@@ -1906,8 +1910,8 @@ impl BirdCard {
                         .tuck_card(bird_idx);
                 }
                 Ok(ActivateResult {
-                  was_successful,
-                  ..Default::default()
+                    was_successful,
+                    ..Default::default()
                 })
             }
             Self::RedJunglefowl => {
@@ -2214,11 +2218,14 @@ impl BirdCard {
             }
             Self::LoggerheadShrike => {
                 // when another player takes the "gain food" action, if they gain any number of [rodent], cache 1 [rodent] from the supply on this bird.
-                if
-                    env._turn_action_taken == 1
-                    && env.current_turn_player().get_foods()[FoodIndex::Rodent as usize] > env._food_at_start_of_turn[FoodIndex::Rodent as usize]
+                if env._turn_action_taken == 1
+                    && env.current_turn_player().get_foods()[FoodIndex::Rodent as usize]
+                        > env._food_at_start_of_turn[FoodIndex::Rodent as usize]
                 {
-                    let row = env.get_player_mut(bird_player_idx).get_mat_mut().get_row_mut(bird_habitat);
+                    let row = env
+                        .get_player_mut(bird_player_idx)
+                        .get_mat_mut()
+                        .get_row_mut(bird_habitat);
                     row.cache_food(bird_idx, FoodIndex::Rodent);
 
                     return Ok(true);
@@ -2272,7 +2279,8 @@ impl BirdCard {
             Self::HorsfieldsBronzeCuckoo | Self::VioletCuckoo => {
                 // when another player takes the "lay eggs" action, lay 1 [egg] on another bird with wingspan less than 30 cm.
                 // [Violet only] you may go 2 over its egg limit while using this power.
-                let satisfies_condition = *action_type_taken == Action::ChooseAction && action_taken == 1;
+                let satisfies_condition =
+                    *action_type_taken == Action::ChooseAction && action_taken == 1;
 
                 if satisfies_condition {
                     let egg_cap_override = match self {
