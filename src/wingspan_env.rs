@@ -583,6 +583,21 @@ impl PyWingspanEnv {
         slf.borrow().inner._round_idx
     }
 
+    #[getter]
+    pub fn actions(slf: &Bound<'_, Self>) -> Vec<PyAction> {
+        slf.borrow()
+            .inner
+            ._action_queue
+            .iter()
+            .map(PyAction::from)
+            .collect_vec()
+    }
+
+    #[getter]
+    pub fn players(slf: &Bound<'_, Self>) -> Vec<Player> {
+        slf.borrow().inner._players.clone()
+    }
+
     #[pyo3(signature = (seed=None))]
     pub fn reset(slf: &Bound<'_, Self>, seed: Option<u64>) {
         slf.borrow_mut().inner.reset(seed)
