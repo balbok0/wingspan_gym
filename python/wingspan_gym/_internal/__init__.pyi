@@ -28,6 +28,10 @@ class PyWingspanEnv:
         ...
 
     @property
+    def actions(self) -> list[PyAction]: ...
+    @property
+    def players(self) -> list[Player]: ...
+    @property
     def round_idx(self) -> int:
         """
         Index of a current round played.
@@ -400,7 +404,6 @@ There are two different types of scoring in Wingspan:
     For example see [Cartographer](https://navarog.github.io/wingsearch/card/1007)
 """
 
-
 class FoodIndex(Enum):
     """Enum representing different food types in the game of wingspan.
 
@@ -412,3 +415,5 @@ class FoodIndex(Enum):
     Fish = 2
     Fruit = 3
     Rodent = 4
+
+class ObservationSpace: ...
