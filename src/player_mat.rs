@@ -60,7 +60,9 @@ impl MatRow {
             }
 
             if let Ok(mut action_res) = bird.activate(env, &self.habitat, bird_idx) {
-                actions.append(&mut action_res.immediate_actions);
+                // Prepend actions since we are iterating right to left, and birds to right should be of top of the stack
+                actions.splice(..0, action_res.immediate_actions);
+
                 end_of_turn_actions.append(&mut action_res.end_of_turn_actions);
 
                 if action_res.was_successful && bird.is_predator() {
@@ -70,7 +72,7 @@ impl MatRow {
         }
 
         // Actions are pushed onto back of the queue, so reverse to match order of actions
-        (actions.into_iter().rev().collect(), end_of_turn_actions)
+        (actions, end_of_turn_actions)
     }
 
     pub fn num_spots_to_place_eggs(&self) -> usize {
