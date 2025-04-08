@@ -5,10 +5,8 @@ from typing import Any, Optional
 import gymnasium as gym
 from ._internal import Player, PyAction, PyWingspanEnv, StepResult
 
-import numpy as np
 
-
-class WingspanEnv(gym.Env[PyWingspanEnv, np.uint8]):
+class WingspanEnv(gym.Env[PyWingspanEnv, int]):
     def __init__(self):
         """gym Environment representing a game of Wingspan.
 
@@ -30,7 +28,9 @@ class WingspanEnv(gym.Env[PyWingspanEnv, np.uint8]):
         assert seed is None or seed >= 0
         self._inner.reset(seed)
 
-    def step(self, action: np.uint8) -> tuple[PyWingspanEnv, float, bool, bool, dict[str, Any]]:
+    def step(
+        self, action: int
+    ) -> tuple[PyWingspanEnv, float, bool, bool, dict[str, Any]]:
         result = self._inner.step(action)
 
         return self._inner, 0.0, result == StepResult.Terminated, False, {}

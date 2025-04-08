@@ -7,8 +7,6 @@ The main interactivity is provided with `step` and `reset` functions, although r
 from enum import Enum
 from typing import Optional, Union
 
-import numpy as np
-
 class PyWingspanEnv:
     def __init__(
         self, hand_limit: Optional[int] = None, num_players: Optional[int] = None
@@ -49,7 +47,7 @@ class PyWingspanEnv:
         """
         ...
 
-    def step(self, action_idx: np.uint8) -> StepResult:
+    def step(self, action_idx: int) -> StepResult:
         """Performs a step for a current player.
 
         Args:
@@ -98,13 +96,11 @@ class PyWingspanEnv:
         ...
 
     def bird_deck(self) -> DeckAndHolder:
-        """Bird Deck and Bird Card Holder.
-        """
+        """Bird Deck and Bird Card Holder."""
         ...
 
     def bird_feeder(self) -> BirdFeeder:
-        """Bird Feeder (includes both dice in and out of it)
-        """
+        """Bird Feeder (includes both dice in and out of it)"""
         ...
 
     def callbacks(self) -> dict[int, set[BirdCardCallback]]:
@@ -129,7 +125,6 @@ class PyWingspanEnv:
                 list of currently active callbacks this player has.
         """
         ...
-
 
 class StepResult(Enum):
     """Internal enum describing result of the action."""
@@ -208,9 +203,7 @@ class Player:
         ...
 
     @property
-    def mat(self) -> PlayerMat:
-        ...
-
+    def mat(self) -> PlayerMat: ...
     def birds_on_mat(self) -> list[list[BirdCard]]:
         """
         Current birds on the player mat.
@@ -445,7 +438,6 @@ There are two different types of scoring in Wingspan:
     For example see [Cartographer](https://navarog.github.io/wingsearch/card/1007)
 """
 
-
 class FoodIndex(Enum):
     """Enum representing different food types in the game of wingspan.
 
@@ -458,27 +450,21 @@ class FoodIndex(Enum):
     Fruit = 3
     Rodent = 4
 
-
 class DeckAndHolder:
-    """Representation of Bird Card Deck and the Face Up Display.
-    """
+    """Representation of Bird Card Deck and the Face Up Display."""
 
     @property
     def bird_deck(self) -> list[BirdCard]:
-        """Actual deck of not yet used face-down cards.
-        """
+        """Actual deck of not yet used face-down cards."""
         ...
 
     @property
     def face_up_display(self) -> list[BirdCard]:
-        """Face up display containing up to 3 bird cards
-        """
+        """Face up display containing up to 3 bird cards"""
         ...
 
-
 class BirdFeeder:
-    """Representation of dice in and out of Bird Feeder.
-    """
+    """Representation of dice in and out of Bird Feeder."""
 
     @property
     def dice_in_birdfeeder(self) -> list[int]:
@@ -502,7 +488,6 @@ class BirdFeeder:
         """
         ...
 
-
 class BirdCardCallback:
     """Representation of information needed to trigger callback for Pink Powers Birds.
 
@@ -520,8 +505,7 @@ class BirdCardCallback:
 
     @property
     def habitat(self) -> Habitat:
-        """Which habitat this card is currently in.
-        """
+        """Which habitat this card is currently in."""
         ...
 
     @property
@@ -534,10 +518,8 @@ class BirdCardCallback:
 
     @property
     def card_player_idx(self) -> int:
-        """Which player (index) this card belongs to.
-        """
+        """Which player (index) this card belongs to."""
         ...
-
 
 class PlayerMat:
     """Representation of player mat.
@@ -570,7 +552,6 @@ class PlayerMat:
         """
         ...
 
-
 class MatRow:
     """Representation of a row on a player mat.
 
@@ -579,8 +560,7 @@ class MatRow:
 
     @property
     def habitat(self) -> Habitat:
-        """Which habitat this row represents.
-        """
+        """Which habitat this row represents."""
         ...
 
     @property
