@@ -1,12 +1,14 @@
 """Main module containing Wingspan Environment."""
 
-from typing import Optional
+from typing import Any, Optional
 
 import gymnasium as gym
-from ._internal import Player, PyAction, PyWingspanEnv
+from ._internal import Player, PyAction, PyWingspanEnv, StepResult
+
+import numpy as np
 
 
-class WingspanEnv(gym.Env):
+class WingspanEnv(gym.Env[PyWingspanEnv, np.uint8]):
     def __init__(self):
         """gym Environment representing a game of Wingspan.
 
@@ -17,7 +19,7 @@ class WingspanEnv(gym.Env):
         # The biggest action space possible occurs when player needs to choose a card from their hand
         # or place an egg on a mat (15 choices max)
         # TODO: Make this into a valid check like the one commented below
-        self.action_space = gym.spaces.Discrete(20)
+        self.action_space = gym.spaces.Discrete(20)  # type: ignore
         # self.action_space = gym.spaces.Discrete(max(15, self.config.hand_limit)))
 
     def reset(self, *, seed: Optional[int] = None):  # pyright: ignore[reportIncompatibleMethodOverride]
@@ -28,8 +30,10 @@ class WingspanEnv(gym.Env):
         assert seed is None or seed >= 0
         self._inner.reset(seed)
 
-    def step(self, action: int):  # pyright: ignore[reportIncompatibleMethodOverride]
-        return self._inner.step(action)
+    def step(self, action: np.uint8) -> tuple[PyWingspanEnv, float, bool, bool, dict[str, Any]]:
+        result = self._inner.step(action)
+
+        return self._inner, 0.0, result == StepResult.Terminated, False, {}
 
     def action_space_size(self) -> int:
         inner_result = self._inner.action_space_size()

@@ -7,6 +7,8 @@ The main interactivity is provided with `step` and `reset` functions, although r
 from enum import Enum
 from typing import Optional, Union
 
+import numpy as np
+
 class PyWingspanEnv:
     def __init__(
         self, hand_limit: Optional[int] = None, num_players: Optional[int] = None
@@ -47,7 +49,7 @@ class PyWingspanEnv:
         """
         ...
 
-    def step(self, action_idx: int) -> StepResult:
+    def step(self, action_idx: np.uint8) -> StepResult:
         """Performs a step for a current player.
 
         Args:
