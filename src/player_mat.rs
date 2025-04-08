@@ -342,7 +342,7 @@ impl PlayerMat {
                 if let Some(col) = hab_row.col_to_play() {
                     // There is a place in habitat.
                     // Check if we have enough eggs
-                    let egg_req = (col + 1) / 2;
+                    let egg_req = col.div_ceil(2);
 
                     if egg_req > self.num_eggs() {
                         // Not enough eggs
@@ -487,7 +487,7 @@ impl PlayerMat {
             return Err(WingError::InvalidAction);
         }
 
-        let egg_cost = (row.col_to_play().unwrap() + 1) / 2;
+        let egg_cost = row.col_to_play().unwrap().div_ceil(2);
 
         row.play_a_bird(bird_card)?;
 
