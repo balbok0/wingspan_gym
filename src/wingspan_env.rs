@@ -594,6 +594,38 @@ impl PyWingspanEnv {
     }
 
     #[getter]
+    pub fn bird_deck(slf: &Bound<'_, Self>) -> DeckAndHolder {
+        slf.borrow()
+            .inner
+            ._bird_deck
+            .clone()
+    }
+
+    #[getter]
+    pub fn bird_feeder(slf: &Bound<'_, Self>) -> BirdFeeder {
+        slf.borrow()
+            .inner
+            ._bird_feeder
+            .clone()
+    }
+
+    #[getter]
+    pub fn callbacks(slf: &Bound<'_, Self>) -> HashMap<usize, HashSet<BirdCardCallback>> {
+        slf.borrow()
+            .inner
+            ._callbacks
+            .clone()
+    }
+
+    #[getter]
+    pub fn active_callbacks(slf: &Bound<'_, Self>) -> HashMap<usize, HashSet<BirdCardCallback>> {
+        slf.borrow()
+            .inner
+            ._active_callbacks
+            .clone()
+    }
+
+    #[getter]
     pub fn players(slf: &Bound<'_, Self>) -> Vec<Player> {
         slf.borrow().inner._players.clone()
     }

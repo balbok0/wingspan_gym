@@ -93,6 +93,41 @@ class PyWingspanEnv:
         Returns:
             list[int]: List of current point tally for each player
         """
+        ...
+
+    def bird_deck(self) -> DeckAndHolder:
+        """Bird Deck and Bird Card Holder.
+        """
+        ...
+
+    def bird_feeder(self) -> BirdFeeder:
+        """Bird Feeder (includes both dice in and out of it)
+        """
+        ...
+
+    def callbacks(self) -> dict[int, set[BirdCardCallback]]:
+        """Dictionary of all existing callbacks on per player basis.
+
+        Callbacks correspond to Pink ("Once between turns...") powers, that are triggered based on other players actions.
+
+        Returns:
+            dict[int, set[BirdCardCallback]]: Mapping from player idx to
+                list of callbacks this player has.
+        """
+        ...
+
+    def active_callbacks(self) -> dict[int, set[BirdCardCallback]]:
+        """Dictionary of currently active callbacks on per player basis.
+
+        Namely, current players callbacks and all callbacks that already executed between turns of corresponding player are not included.
+        Callbacks correspond to Pink ("Once between turns...") powers, that are triggered based on other players actions.
+
+        Returns:
+            dict[int, set[BirdCardCallback]]: Mapping from player idx to
+                list of currently active callbacks this player has.
+        """
+        ...
+
 
 class StepResult(Enum):
     """Internal enum describing result of the action."""
@@ -123,7 +158,7 @@ class Player:
 
         Returns:
             bytes: Bytes of length 5.
-                Indexes correspond food types as defined in FoodIndex.
+                Indexes correspond food types as defined in [FoodIndex][wingspan_gym._internal.FoodIndex].
         """
         ...
 
@@ -220,7 +255,7 @@ class BirdCard:
         Returns:
             tuple[bytes, int, CostAlternative]: Cost to play a card, represented as a tuple.
                 Members of this tuples mean:
-                    1. `bytes` - Bytes of length 5. Each byte represents cost of each FoodIndex to play the card.
+                    1. `bytes` - Bytes of length 5. Each byte represents cost of each [FoodIndex][wingspan_gym._internal.FoodIndex] to play the card.
                     2. `int` - Total number of food that one need to pay to play this card
                     3. `CostAlternative` - Whether cost is:
                         - Alternative (i.e. yes - For example "Fish/Seed")
@@ -404,6 +439,7 @@ There are two different types of scoring in Wingspan:
     For example see [Cartographer](https://navarog.github.io/wingsearch/card/1007)
 """
 
+
 class FoodIndex(Enum):
     """Enum representing different food types in the game of wingspan.
 
@@ -416,4 +452,82 @@ class FoodIndex(Enum):
     Fruit = 3
     Rodent = 4
 
-class ObservationSpace: ...
+
+class DeckAndHolder:
+    """Representation of Bird Card Deck and the Face Up Display.
+    """
+
+    @property
+    def bird_deck(self) -> list[BirdCard]:
+        """Actual deck of not yet used face-down cards.
+        """
+        ...
+
+    @property
+    def face_up_display(self) -> list[BirdCard]:
+        """Face up display containing up to 3 bird cards
+        """
+        ...
+
+
+class BirdFeeder:
+    """Representation of dice in and out of Bird Feeder.
+    """
+
+    @property
+    def dice_in_birdfeeder(self) -> list[int]:
+        """Dice in bird feeder, that are ready to be taken out of it
+
+        Returns:
+            list[int]: List of integers representing dice faces.
+                Values 0-4 correspond to those defined in [FoodIndex][wingspan_gym._internal.FoodIndex].
+                Value 5 corresponds to Invertebrate/Seed face.
+        """
+        ...
+
+    @property
+    def dice_out_birdfeeder(self) -> list[int]:
+        """Dice out of bird feeder, that are ready to be taken out of it
+
+        Returns:
+            list[int]: List of integers representing dice faces.
+                Values 0-4 correspond to those defined in [FoodIndex][wingspan_gym._internal.FoodIndex].
+                Value 5 corresponds to Invertebrate/Seed face.
+        """
+        ...
+
+
+class BirdCardCallback:
+    """Representation of information needed to trigger callback for Pink Powers Birds.
+
+    Note that instead of being and actual callback (i.e. a function that takes arguments),
+    it is list of arguments to said function.
+    This function is triggered internally in Rust, on [BirdCard][wingspan_gym._internal.BirdCard] enum.
+
+    Callbacks only ever exist for birds that are currently on the board.
+    """
+
+    @property
+    def card(self) -> BirdCard:
+        """Card this callback belongs to."""
+        ...
+
+    @property
+    def habitat(self) -> Habitat:
+        """Which habitat this card is currently in.
+        """
+        ...
+
+    @property
+    def card_idx(self) -> int:
+        """Which bird number (left to right) this card is currently at.
+
+        Note that bird number/index is different than column, since some birds can cover multiple columns.
+        """
+        ...
+
+    @property
+    def card_player_idx(self) -> int:
+        """Which player (index) this card belongs to.
+        """
+        ...

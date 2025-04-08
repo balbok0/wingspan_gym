@@ -2,7 +2,7 @@ use crate::{bird_card::BirdCard, habitat::Habitat};
 use pyo3::prelude::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[pyclass]
+#[pyclass(get_all)]
 pub struct BirdCardCallback {
     pub card: BirdCard,
     pub habitat: Habitat,

@@ -3,9 +3,14 @@ use crate::{
     error::{WingError, WingResult},
 };
 
+use pyo3::prelude::*;
+
 #[derive(Default, Debug, Clone)]
-pub(crate) struct DeckAndHolder {
+#[pyclass]
+pub struct DeckAndHolder {
+    #[pyo3(get, name = "bird_deck")]
     _bird_deck: Vec<BirdCard>,
+    #[pyo3(get, name = "face_up_display")]
     _face_up_display: Vec<BirdCard>,
 }
 

@@ -1,6 +1,9 @@
 use action::PyAction;
 use bird_card::{BirdCard, BirdCardColor};
+use bird_card_callback::BirdCardCallback;
+use bird_feeder::BirdFeeder;
 use bonus_card::{BonusCard, PyScoringRuleType};
+use deck_and_holder::DeckAndHolder;
 use expansion::Expansion;
 use food::{CostAlternative, FoodIndex};
 use habitat::Habitat;
@@ -43,6 +46,9 @@ fn wingspan_gym(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<BonusCard>()?;
     m.add_class::<PyScoringRuleType>()?;
     m.add_class::<FoodIndex>()?;
+    m.add_class::<DeckAndHolder>()?;
+    m.add_class::<BirdFeeder>()?;
+    m.add_class::<BirdCardCallback>()?;
 
     Ok(())
 }

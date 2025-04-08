@@ -6,18 +6,21 @@ use crate::{
     food::FoodIndex,
 };
 
+use pyo3::prelude::*;
+
 fn sample_dice(rng: &mut StdRng, num_times: usize) -> Vec<u8> {
     (0..num_times).map(|_| rng.gen_range(0..6u8)).collect()
 }
 
 #[derive(Debug, Clone, Default)]
+#[pyclass(get_all)]
 pub struct BirdFeeder {
     dice_in_birdfeeder: Vec<u8>,
     dice_out_birdfeeder: Vec<u8>,
 }
 
 #[derive(Debug, Clone)]
-pub(crate) enum BirdFeederActionResult {
+pub enum BirdFeederActionResult {
     GainFood(FoodIndex),
     FollowupAction(Action),
 }
