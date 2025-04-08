@@ -207,6 +207,10 @@ class Player:
         """
         ...
 
+    @property
+    def mat(self) -> PlayerMat:
+        ...
+
     def birds_on_mat(self) -> list[list[BirdCard]]:
         """
         Current birds on the player mat.
@@ -531,5 +535,102 @@ class BirdCardCallback:
     @property
     def card_player_idx(self) -> int:
         """Which player (index) this card belongs to.
+        """
+        ...
+
+
+class PlayerMat:
+    """Representation of player mat.
+    Contains only information about rows and birds on them
+    """
+    @property
+    def forest(self) -> MatRow:
+        """Row of bird cards, eggs, tucked cards etc. for Forest habitat.
+
+        Returns:
+            MatRow: Forest habitat row.
+        """
+        ...
+
+    @property
+    def grassland(self) -> MatRow:
+        """Row of bird cards, eggs, tucked cards etc. for Grassland habitat.
+
+        Returns:
+            MatRow: Grassland habitat row.
+        """
+        ...
+
+    @property
+    def wetland(self) -> MatRow:
+        """Row of bird cards, eggs, tucked cards etc. for Wetland habitat.
+
+        Returns:
+            MatRow: Wetland habitat row.
+        """
+        ...
+
+
+class MatRow:
+    """Representation of a row on a player mat.
+
+    It tracks state of birds, tucked cards, eggs, cached food etc.
+    """
+
+    @property
+    def habitat(self) -> Habitat:
+        """Which habitat this row represents.
+        """
+        ...
+
+    @property
+    def columns_filled(self) -> int:
+        """Number of columns filled in this habitat/row.
+
+        It does take into consideration sideways placed birds (example: "Long Tailed Tit"),
+        so it is always greater or equal to length of [birds][wingspan_gym._internal.MatRow.birds].
+        """
+        ...
+
+    @property
+    def birds(self) -> list[BirdCard]:
+        """Birds placed in the row left-to-right.
+
+        Counts only face up (non-tucked, non-covered) birds.
+        Each bird is unique, so sideways birds occur only once.
+        """
+        ...
+
+    @property
+    def tucked_cards(self) -> bytes:
+        """List of u8 integers (represented as bytes) of tucked cards behind each bird.
+
+        It is the same length as [birds][wingspan_gym._internal.MatRow.birds].
+        """
+        ...
+
+    @property
+    def cached_food(self) -> list[bytes]:
+        """List of lists of u8 integers (represented as bytes) of cached food on top of birds.
+
+        Outer list is the same length as [birds][wingspan_gym._internal.MatRow.birds].
+        Inner list is always length 5 (number of unique FoodIndices) for each food source.
+        """
+        ...
+
+    @property
+    def eggs(self) -> bytes:
+        """List of u8 integers (represented as bytes) of eggs placed on each bird.
+
+        It is the same length as [birds][wingspan_gym._internal.MatRow.birds].
+        ...
+        """
+
+    @property
+    def eggs_cap(self) -> bytes:
+        """List of u8 integers (represented as bytes) of eggs capacity (i.e. number of egg spots) of each bird.
+
+        It is the same length as [birds][wingspan_gym._internal.MatRow.birds].
+        ...
         """
         ...

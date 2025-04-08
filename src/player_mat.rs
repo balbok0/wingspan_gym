@@ -8,18 +8,28 @@ use crate::{
     wingspan_env::WingspanEnv,
 };
 
+use pyo3::prelude::*;
+
 type BirdResourceRow = [u8; 5];
 
 #[derive(Debug, Clone)]
+#[pyclass]
 pub struct MatRow {
     // Mapping from column idx -> index in birds. This is because some birds can cover multiple places
+    #[pyo3(get)]
     habitat: Habitat,
     bird_col_idxs: Vec<usize>,
+    #[pyo3(get, name="columns_filled")]
     next_col_to_play: usize,
+    #[pyo3(get)]
     birds: Vec<BirdCard>,
+    #[pyo3(get)]
     tucked_cards: Vec<u8>,
+    #[pyo3(get)]
     cached_food: Vec<BirdResourceRow>,
+    #[pyo3(get)]
     eggs: Vec<u8>,
+    #[pyo3(get)]
     eggs_cap: Vec<u8>,
 }
 
@@ -286,6 +296,7 @@ impl MatRow {
 }
 
 #[derive(Debug, Clone)]
+#[pyclass(get_all)]
 pub struct PlayerMat {
     forest: MatRow,
     grassland: MatRow,

@@ -22,6 +22,7 @@ pub struct Player {
     #[pyo3(get)]
     pub(crate) turns_left: u8,
 
+    #[pyo3(get)]
     mat: PlayerMat,
 
     #[pyo3(get)]
