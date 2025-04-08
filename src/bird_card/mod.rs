@@ -37,10 +37,10 @@ pub(crate) fn is_enough_food_to_play_a_card(card: &BirdCard, player_food: &Foods
         crate::food::CostAlternative::Yes => food_req
             .iter()
             .zip(player_food)
-            .all(|(req, res)| req.map_or(false, |req| req <= *res)),
+            .all(|(req, res)| req.is_some_and(|req| req <= *res)),
         crate::food::CostAlternative::No => food_req
             .iter()
             .zip(player_food)
-            .all(|(req, res)| req.map_or(true, |req| req <= *res)),
+            .all(|(req, res)| req.is_none_or(|req| req <= *res)),
     }
 }
